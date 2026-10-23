@@ -2,4 +2,14 @@
 <resources>
     <string name="core_back">返回</string>
     <string name="core_coming_soon">即将推出</string>
+    <string name="core_today">今天</string>
+    <string name="core_tomorrow">明天</string>
+    <string name="core_yesterday">昨天</string>
+    <string name="core_ok">确定</string>
+    <string name="core_cancel">取消</string>
+    <string name="core_clear">清除</string>
+    <string name="core_save">保存</string>
+    <string name="core_delete">删除</string>
+    <string name="core_undo">撤销</string>
+    <string name="core_more_options">更多选项</string>
 </resources>

@@ -39,6 +39,9 @@ private val LightColors = lightColorScheme(
     surfaceContainer = Color(0xFFEBEFE6),
     surfaceContainerHigh = Color(0xFFE6E9E0),
     surfaceContainerHighest = Color(0xFFE0E4DB),
+    inverseSurface = Color(0xFF2D322B),
+    inverseOnSurface = Color(0xFFEEF2E8),
+    inversePrimary = Color(0xFFA1D39A),
     surfaceDim = Color(0xFFD7DBD2),
     surfaceBright = Color(0xFFF7FBF1),
 )
@@ -70,6 +73,9 @@ private val DarkColors = darkColorScheme(
     surfaceContainer = Color(0xFF1C211B),
     surfaceContainerHigh = Color(0xFF272B25),
     surfaceContainerHighest = Color(0xFF323630),
+    inverseSurface = Color(0xFFE0E4DB),
+    inverseOnSurface = Color(0xFF2D322B),
+    inversePrimary = Color(0xFF3B6939),
     surfaceDim = Color(0xFF10140F),
     surfaceBright = Color(0xFF363A34),
 )

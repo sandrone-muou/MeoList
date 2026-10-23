@@ -2,4 +2,85 @@
 <resources>
     <string name="tasks_title">任务</string>
     <string name="tasks_quadrant_title">四象限</string>
+
+    <string name="tasks_priority">优先级</string>
+    <string name="tasks_priority_high">高</string>
+    <string name="tasks_priority_medium">中</string>
+    <string name="tasks_priority_low">低</string>
+    <string name="tasks_priority_none">无</string>
+
+    <string name="tasks_section_overdue">已过期</string>
+    <string name="tasks_section_today">今天</string>
+    <string name="tasks_section_tomorrow">明天</string>
+    <string name="tasks_section_next7">最近 7 天</string>
+    <string name="tasks_section_later">更远</string>
+    <string name="tasks_section_no_date">无日期</string>
+    <string name="tasks_section_completed">已完成</string>
+
+    <string name="tasks_filter_inbox">收集箱</string>
+    <string name="tasks_filter_today">今天</string>
+    <string name="tasks_filter_next7">最近 7 天</string>
+    <string name="tasks_filter_all">所有</string>
+    <string name="tasks_filter_completed">已完成</string>
+    <string name="tasks_filter_trash">回收站</string>
+
+    <string name="tasks_moved_to_trash">已移至回收站</string>
+    <string name="tasks_open_lists">打开清单</string>
+    <string name="tasks_empty_trash">清空回收站</string>
+    <string name="tasks_empty_trash_message">回收站中的所有任务将被永久删除。</string>
+    <string name="tasks_search">搜索</string>
+    <string name="tasks_add">添加</string>
+    <string name="tasks_restore">恢复</string>
+    <string name="tasks_delete_forever">永久删除</string>
+    <string name="tasks_delete_forever_message">该任务及其子任务将被永久删除。</string>
+    <string name="tasks_trash_empty">回收站是空的</string>
+    <string name="tasks_empty">这里还没有任务，点击 + 添加</string>
+    <string name="tasks_drawer_title">MeoList</string>
+    <string name="tasks_drawer_lists">清单</string>
+    <string name="tasks_drawer_tags">标签</string>
+    <string name="tasks_manage_lists">管理清单和标签</string>
+
+    <string name="tasks_add_hint">准备做什么？</string>
+    <string name="tasks_due_date">日期</string>
+    <string name="tasks_next_week">下周</string>
+    <string name="tasks_pick_date">选择日期</string>
+    <string name="tasks_no_date">无日期</string>
+
+    <string name="tasks_in_trash_banner">该任务在回收站中。</string>
+    <string name="tasks_subtask_of">所属任务：%1$s</string>
+    <string name="tasks_title_hint">标题</string>
+    <string name="tasks_list">清单</string>
+    <string name="tasks_tags">标签</string>
+    <string name="tasks_none">无</string>
+    <string name="tasks_set_time">设置时间</string>
+    <string name="tasks_new_tag">新建标签</string>
+    <string name="tasks_note_hint">备注</string>
+    <string name="tasks_subtasks">子任务</string>
+    <string name="tasks_subtasks_progress">子任务 %1$d/%2$d</string>
+    <string name="tasks_add_subtask">添加子任务</string>
+    <string name="tasks_edit_subtask">编辑子任务</string>
+    <string name="tasks_open_details">打开详情</string>
+    <string name="tasks_created_at">创建于 %1$s</string>
+    <string name="tasks_completed_at">完成于 %1$s</string>
+
+    <string name="tasks_search_hint">搜索任务</string>
+    <string name="tasks_search_no_results">没有匹配的任务</string>
+
+    <string name="tasks_new_list">新建清单</string>
+    <string name="tasks_new_folder">新建文件夹</string>
+    <string name="tasks_archived">已归档</string>
+    <string name="tasks_folders">文件夹</string>
+    <string name="tasks_no_lists">还没有清单</string>
+    <string name="tasks_no_folders">还没有文件夹</string>
+    <string name="tasks_no_tags">还没有标签</string>
+    <string name="tasks_edit_folder">编辑文件夹</string>
+    <string name="tasks_delete_folder_message">将删除该文件夹，其中的清单会保留。</string>
+    <string name="tasks_edit_tag">编辑标签</string>
+    <string name="tasks_delete_tag_message">将从所有任务中移除该标签。</string>
+    <string name="tasks_edit_list">编辑清单</string>
+    <string name="tasks_name">名称</string>
+    <string name="tasks_folder">文件夹</string>
+    <string name="tasks_archive_list">归档清单</string>
+    <string name="tasks_delete_list">删除清单</string>
+    <string name="tasks_delete_list_message">将删除该清单，其中的任务会移至回收站。</string>
 </resources>

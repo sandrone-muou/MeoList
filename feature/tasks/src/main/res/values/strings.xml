@@ -2,4 +2,85 @@
 <resources>
     <string name="tasks_title">Tasks</string>
     <string name="tasks_quadrant_title">Eisenhower matrix</string>
+
+    <string name="tasks_priority">Priority</string>
+    <string name="tasks_priority_high">High</string>
+    <string name="tasks_priority_medium">Medium</string>
+    <string name="tasks_priority_low">Low</string>
+    <string name="tasks_priority_none">None</string>
+
+    <string name="tasks_section_overdue">Overdue</string>
+    <string name="tasks_section_today">Today</string>
+    <string name="tasks_section_tomorrow">Tomorrow</string>
+    <string name="tasks_section_next7">Next 7 days</string>
+    <string name="tasks_section_later">Later</string>
+    <string name="tasks_section_no_date">No date</string>
+    <string name="tasks_section_completed">Completed</string>
+
+    <string name="tasks_filter_inbox">Inbox</string>
+    <string name="tasks_filter_today">Today</string>
+    <string name="tasks_filter_next7">Next 7 days</string>
+    <string name="tasks_filter_all">All</string>
+    <string name="tasks_filter_completed">Completed</string>
+    <string name="tasks_filter_trash">Trash</string>
+
+    <string name="tasks_moved_to_trash">Moved to trash</string>
+    <string name="tasks_open_lists">Open lists</string>
+    <string name="tasks_empty_trash">Empty trash</string>
+    <string name="tasks_empty_trash_message">All tasks in the trash will be deleted permanently.</string>
+    <string name="tasks_search">Search</string>
+    <string name="tasks_add">Add</string>
+    <string name="tasks_restore">Restore</string>
+    <string name="tasks_delete_forever">Delete forever</string>
+    <string name="tasks_delete_forever_message">This task and its subtasks will be deleted permanently.</string>
+    <string name="tasks_trash_empty">Trash is empty</string>
+    <string name="tasks_empty">No tasks here. Tap + to add one.</string>
+    <string name="tasks_drawer_title">MeoList</string>
+    <string name="tasks_drawer_lists">Lists</string>
+    <string name="tasks_drawer_tags">Tags</string>
+    <string name="tasks_manage_lists">Manage lists &amp; tags</string>
+
+    <string name="tasks_add_hint">What would you like to do?</string>
+    <string name="tasks_due_date">Due date</string>
+    <string name="tasks_next_week">Next week</string>
+    <string name="tasks_pick_date">Pick a date</string>
+    <string name="tasks_no_date">No date</string>
+
+    <string name="tasks_in_trash_banner">This task is in the trash.</string>
+    <string name="tasks_subtask_of">Subtask of: %1$s</string>
+    <string name="tasks_title_hint">Title</string>
+    <string name="tasks_list">List</string>
+    <string name="tasks_tags">Tags</string>
+    <string name="tasks_none">None</string>
+    <string name="tasks_set_time">Set time</string>
+    <string name="tasks_new_tag">New tag</string>
+    <string name="tasks_note_hint">Notes</string>
+    <string name="tasks_subtasks">Subtasks</string>
+    <string name="tasks_subtasks_progress">Subtasks %1$d/%2$d</string>
+    <string name="tasks_add_subtask">Add subtask</string>
+    <string name="tasks_edit_subtask">Edit subtask</string>
+    <string name="tasks_open_details">Open details</string>
+    <string name="tasks_created_at">Created %1$s</string>
+    <string name="tasks_completed_at">Completed %1$s</string>
+
+    <string name="tasks_search_hint">Search tasks</string>
+    <string name="tasks_search_no_results">No matching tasks</string>
+
+    <string name="tasks_new_list">New list</string>
+    <string name="tasks_new_folder">New folder</string>
+    <string name="tasks_archived">Archived</string>
+    <string name="tasks_folders">Folders</string>
+    <string name="tasks_no_lists">No lists yet</string>
+    <string name="tasks_no_folders">No folders yet</string>
+    <string name="tasks_no_tags">No tags yet</string>
+    <string name="tasks_edit_folder">Edit folder</string>
+    <string name="tasks_delete_folder_message">The folder will be deleted. Its lists are kept.</string>
+    <string name="tasks_edit_tag">Edit tag</string>
+    <string name="tasks_delete_tag_message">The tag will be removed from all tasks.</string>
+    <string name="tasks_edit_list">Edit list</string>
+    <string name="tasks_name">Name</string>
+    <string name="tasks_folder">Folder</string>
+    <string name="tasks_archive_list">Archive list</string>
+    <string name="tasks_delete_list">Delete list</string>
+    <string name="tasks_delete_list_message">The list will be deleted and its tasks moved to the trash.</string>
 </resources>
