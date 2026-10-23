@@ -32,6 +32,7 @@ class TaskInteractor @Inject constructor(
     private val repo: TaskRepository,
     private val clock: Clock,
     private val reminders: ReminderScheduler,
+    private val completionHook: TaskCompletionHook = TaskCompletionHook.None,
 ) {
     suspend fun add(
         title: String,
@@ -100,7 +101,11 @@ class TaskInteractor @Inject constructor(
         if (task.isDone == done) return null
         val now = clock.now()
         if (done) {
-            nextOccurrence(task)?.let { next -> return advance(task, next, now) }
+            nextOccurrence(task)?.let { next ->
+                val advance = advance(task, next, now)
+                completionHook.onDoneChanged(id, true)
+                return advance
+            }
         }
         repo.update(
             task.copy(
@@ -110,6 +115,7 @@ class TaskInteractor @Inject constructor(
             ),
         )
         reminders.syncTask(id)
+        completionHook.onDoneChanged(id, done)
         return null
     }
 

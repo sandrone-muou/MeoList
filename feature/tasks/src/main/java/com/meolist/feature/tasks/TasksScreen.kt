@@ -289,6 +289,7 @@ private fun TaskGroupsList(
                                 onClick = { onOpenTask(item.task.id) },
                                 modifier = Modifier.background(MaterialTheme.colorScheme.surface),
                                 hasReminder = item.task.id in state.reminderTaskIds,
+                                isTiming = item.task.id in state.timingTaskIds,
                             )
                         }
                     }

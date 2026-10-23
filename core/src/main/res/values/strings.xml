@@ -15,4 +15,7 @@
     <string name="core_perm_notifications_off">Notifications are off, so reminders will not be shown.</string>
     <string name="core_perm_exact_alarm_off">Exact alarms are not allowed. Reminders may arrive a few minutes late.</string>
     <string name="core_perm_allow">Allow</string>
+    <string name="core_duration_h">%1$dh</string>
+    <string name="core_duration_m">%1$dm</string>
+    <string name="core_duration_hm">%1$dh %2$dm</string>
 </resources>

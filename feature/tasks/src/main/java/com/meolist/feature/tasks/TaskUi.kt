@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.outlined.Notes
 import androidx.compose.material.icons.outlined.Alarm
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
@@ -130,6 +131,7 @@ internal fun TaskRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     hasReminder: Boolean = false,
+    isTiming: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val task = item.task
@@ -153,13 +155,16 @@ internal fun TaskRow(
                 overflow = TextOverflow.Ellipsis,
             )
             val hasMeta = task.dueAt != null || (showList && item.list != null) || item.subtaskTotal > 0 ||
-                item.tags.isNotEmpty() || task.note.isNotBlank() || repeats || hasReminder
+                item.tags.isNotEmpty() || task.note.isNotBlank() || repeats || hasReminder || isTiming
             if (hasMeta) {
                 Row(
                     modifier = Modifier.padding(top = 2.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    if (isTiming) {
+                        Icon(Icons.Outlined.Timer, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                    }
                     task.dueAt?.let { due ->
                         val overdue = !task.isDone && due.toLocalDateTime(zone).toLocalDate() < today
                         MetaText(

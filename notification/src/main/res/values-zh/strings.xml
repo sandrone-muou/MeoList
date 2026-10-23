@@ -6,4 +6,18 @@
     <string name="notif_action_snooze">10 分钟后提醒</string>
     <string name="notif_today">今天</string>
     <string name="notif_tomorrow">明天</string>
+    <string name="notif_channel_timers">进行中的计时</string>
+    <string name="notif_channel_timers_desc">计时运行时显示</string>
+    <string name="notif_channel_goals">目标</string>
+    <string name="notif_channel_goals_desc">活动目标达成时通知</string>
+    <string name="notif_action_stop">停止</string>
+    <string name="notif_timer_running">计时中</string>
+    <string name="notif_timers_summary">%1$d 个计时进行中</string>
+    <string name="notif_goal_title">目标达成：%1$s</string>
+    <string name="notif_goal_day">今天已累计 %1$s。</string>
+    <string name="notif_goal_week">本周已累计 %1$s。</string>
+    <string name="notif_goal_month">本月已累计 %1$s。</string>
+    <string name="notif_duration_h">%1$d 小时</string>
+    <string name="notif_duration_m">%1$d 分钟</string>
+    <string name="notif_duration_hm">%1$d 小时 %2$d 分钟</string>
 </resources>

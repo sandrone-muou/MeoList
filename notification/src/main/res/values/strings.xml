@@ -6,4 +6,18 @@
     <string name="notif_action_snooze">Snooze 10 min</string>
     <string name="notif_today">Today</string>
     <string name="notif_tomorrow">Tomorrow</string>
+    <string name="notif_channel_timers">Running timers</string>
+    <string name="notif_channel_timers_desc">Shows timers while they run</string>
+    <string name="notif_channel_goals">Goals</string>
+    <string name="notif_channel_goals_desc">Announces reached activity goals</string>
+    <string name="notif_action_stop">Stop</string>
+    <string name="notif_timer_running">Running</string>
+    <string name="notif_timers_summary">%1$d timers running</string>
+    <string name="notif_goal_title">Goal reached: %1$s</string>
+    <string name="notif_goal_day">You tracked %1$s today.</string>
+    <string name="notif_goal_week">You tracked %1$s this week.</string>
+    <string name="notif_goal_month">You tracked %1$s this month.</string>
+    <string name="notif_duration_h">%1$dh</string>
+    <string name="notif_duration_m">%1$dm</string>
+    <string name="notif_duration_hm">%1$dh %2$dm</string>
 </resources>

@@ -27,6 +27,7 @@ fun NavGraphBuilder.tasksGraph(navController: NavController) {
         TaskDetailRoute(
             onBack = { navController.popBackStack() },
             onOpenTask = { navController.navigate(Routes.taskDetail(it)) },
+            onAddActivityType = { navController.navigate(Routes.activityTypeEdit()) },
         )
     }
     composable(Routes.TASK_SEARCH) {

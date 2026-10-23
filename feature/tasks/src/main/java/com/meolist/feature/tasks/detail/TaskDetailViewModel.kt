@@ -20,6 +20,11 @@ import com.meolist.domain.task.TaskInteractor
 import com.meolist.domain.task.TaskList
 import com.meolist.domain.task.TaskListRepository
 import com.meolist.domain.task.TaskRepository
+import com.meolist.domain.tracker.ActivityType
+import com.meolist.domain.tracker.ActivityTypeRepository
+import com.meolist.domain.tracker.RunningTimer
+import com.meolist.domain.tracker.TimeRecordRepository
+import com.meolist.domain.tracker.TimerInteractor
 import com.meolist.feature.tasks.dueMillis
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -53,6 +58,17 @@ data class TaskDetailState(
     val zone: ZoneId = ZoneId.systemDefault(),
 )
 
+/** A running timer of this task together with its activity type. */
+data class TaskTimer(val timer: RunningTimer, val type: ActivityType)
+
+data class TaskTimerState(
+    val running: List<TaskTimer> = emptyList(),
+    /** Activity types that can be started (archived ones excluded). */
+    val types: List<ActivityType> = emptyList(),
+    /** Recorded time of finished records, running timers excluded. */
+    val recordedMs: Long = 0,
+)
+
 @HiltViewModel
 class TaskDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -61,6 +77,9 @@ class TaskDetailViewModel @Inject constructor(
     private val tagRepo: TagRepository,
     private val interactor: TaskInteractor,
     reminderRepo: ReminderRepository,
+    timeRecords: TimeRecordRepository,
+    activityTypes: ActivityTypeRepository,
+    private val timers: TimerInteractor,
     private val clock: Clock,
     @ApplicationScope private val appScope: CoroutineScope,
 ) : ViewModel() {
@@ -113,6 +132,43 @@ class TaskDetailViewModel @Inject constructor(
             zone = clock.zone(),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TaskDetailState())
+
+    val timer: StateFlow<TaskTimerState> = combine(
+        timeRecords.observeRunning(),
+        activityTypes.observeTypes(),
+        timeRecords.observeTaskTotalMs(taskId),
+    ) { running, types, total ->
+        val byId = types.associateBy { it.id }
+        TaskTimerState(
+            running = running.filter { it.taskId == taskId }.sortedBy { it.startedAt }
+                .mapNotNull { r -> byId[r.typeId]?.let { TaskTimer(r, it) } },
+            types = types.filter { !it.archived },
+            recordedMs = total,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TaskTimerState())
+
+    fun now(): Long = clock.now()
+
+    /** Starts timing with the task's default activity, or calls [onPickType] when there is none. */
+    fun startTimer(onPickType: () -> Unit) {
+        viewModelScope.launch {
+            val typeId = timers.defaultTypeFor(taskId)
+            if (typeId == null) onPickType() else appScope.launch { timers.start(typeId, taskId) }
+        }
+    }
+
+    /** Starts timing as [typeId]; with [rememberForList] the task's list will use it by default. */
+    fun startTimer(typeId: Long, rememberForList: Boolean) {
+        val listId = draft.value?.listId
+        appScope.launch {
+            if (rememberForList && listId != null) timers.setListDefaultType(listId, typeId)
+            timers.start(typeId, taskId)
+        }
+    }
+
+    fun stopTimer(runningId: Long) {
+        appScope.launch { timers.stop(runningId) }
+    }
 
     fun setTitle(title: String) = editText { it.copy(title = title) }
     fun setNote(note: String) = editText { it.copy(note = note) }

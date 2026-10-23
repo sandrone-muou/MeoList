@@ -12,6 +12,7 @@ import com.meolist.domain.task.Priority
 import com.meolist.domain.task.RepeatAdvance
 import com.meolist.domain.task.Tag
 import com.meolist.domain.task.TagRepository
+import com.meolist.domain.task.Task
 import com.meolist.domain.task.TaskFilter
 import com.meolist.domain.task.TaskGroup
 import com.meolist.domain.task.TaskGrouping
@@ -20,6 +21,7 @@ import com.meolist.domain.task.TaskList
 import com.meolist.domain.task.TaskListRepository
 import com.meolist.domain.task.TaskRepository
 import com.meolist.domain.task.TaskSnapshot
+import com.meolist.domain.tracker.TimeRecordRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +32,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -50,9 +53,18 @@ data class TasksUiState(
     val zone: ZoneId = ZoneId.systemDefault(),
     /** Tasks with at least one enabled reminder. */
     val reminderTaskIds: Set<Long> = emptySet(),
+    /** Tasks with a running timer. */
+    val timingTaskIds: Set<Long> = emptySet(),
 ) {
     val isTrash: Boolean get() = filter == TaskFilter.Trash
 }
+
+private data class Extras(
+    val trash: List<Task>,
+    val folders: List<ListFolder>,
+    val reminderIds: Set<Long>,
+    val timingIds: Set<Long>,
+)
 
 /** Defaults for the quick-add sheet derived from the current filter. */
 data class QuickAddDefaults(val date: LocalDate?, val listId: Long?, val tagIds: Set<Long>)
@@ -65,6 +77,7 @@ class TasksViewModel @Inject constructor(
     private val interactor: TaskInteractor,
     private val prefs: AppPreferences,
     reminderRepo: ReminderRepository,
+    timeRecords: TimeRecordRepository,
     private val clock: Clock,
 ) : ViewModel() {
 
@@ -88,11 +101,14 @@ class TasksViewModel @Inject constructor(
     val state: StateFlow<TasksUiState> = combine(
         filter.filterNotNull(),
         snapshot,
-        combine(taskRepo.observeTrash(), listRepo.observeFolders(), reminderRepo.observeOwnerIds(ReminderOwner.TASK)) { t, f, r ->
-            Triple(t, f, r)
-        },
+        combine(
+            taskRepo.observeTrash(),
+            listRepo.observeFolders(),
+            reminderRepo.observeOwnerIds(ReminderOwner.TASK),
+            timeRecords.observeRunning().map { running -> running.mapNotNull { it.taskId }.toSet() },
+        ) { t, f, r, timing -> Extras(t, f, r, timing) },
         today,
-    ) { rawFilter, snap, (trash, folders, reminderIds), day ->
+    ) { rawFilter, snap, (trash, folders, reminderIds, timingIds), day ->
         val zone = clock.zone()
         val current = when (rawFilter) {
             is TaskFilter.OfList -> rawFilter.takeIf { f -> snap.lists.any { it.id == f.listId } }
@@ -117,6 +133,7 @@ class TasksViewModel @Inject constructor(
             today = day,
             zone = zone,
             reminderTaskIds = reminderIds,
+            timingTaskIds = timingIds,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TasksUiState())
 

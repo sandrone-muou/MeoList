@@ -8,6 +8,10 @@ import com.meolist.domain.reminder.AlarmPort
 import com.meolist.domain.reminder.ReminderNotifier
 import com.meolist.domain.reminder.ReminderScheduler
 import com.meolist.domain.task.TaskInteractor
+import com.meolist.domain.tracker.GoalAlarmPort
+import com.meolist.domain.tracker.TimerInteractor
+import com.meolist.domain.tracker.TimerNotifier
+import com.meolist.domain.tracker.TimerSync
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.EntryPoint
@@ -22,6 +26,8 @@ import kotlinx.coroutines.launch
 abstract class NotificationModule {
     @Binds abstract fun alarmPort(impl: AndroidAlarmPort): AlarmPort
     @Binds abstract fun reminderNotifier(impl: AndroidReminderNotifier): ReminderNotifier
+    @Binds abstract fun timerNotifier(impl: AndroidTimerNotifier): TimerNotifier
+    @Binds abstract fun goalAlarmPort(impl: AndroidGoalAlarmPort): GoalAlarmPort
 }
 
 /** Dependencies for broadcast receivers and app startup, which are not Hilt entry points themselves. */
@@ -31,6 +37,8 @@ interface NotificationEntryPoint {
     fun reminderScheduler(): ReminderScheduler
     fun taskInteractor(): TaskInteractor
     fun reminderNotifier(): ReminderNotifier
+    fun timerSync(): TimerSync
+    fun timerInteractor(): TimerInteractor
 
     @ApplicationScope
     fun applicationScope(): CoroutineScope
@@ -58,7 +66,11 @@ object NotificationStartup {
         NotificationChannels.create(context)
         val entryPoint = context.notificationEntryPoint()
         // Covers anything the system dropped: force-stops, missed broadcasts on restrictive ROMs.
-        entryPoint.applicationScope().launch { entryPoint.reminderScheduler().rescheduleAll() }
+        entryPoint.applicationScope().launch {
+            entryPoint.reminderScheduler().rescheduleAll()
+            // Timer notifications are gone after a force-stop or an update; post them again.
+            entryPoint.timerSync().sync()
+        }
     }
 }
 
@@ -87,7 +99,10 @@ class SystemEventsReceiver : BroadcastReceiver() {
             -> false
             else -> return
         }
-        runAsync(context) { reminderScheduler().rescheduleAll(recompute) }
+        runAsync(context) {
+            reminderScheduler().rescheduleAll(recompute)
+            timerSync().sync()
+        }
     }
 }
 
@@ -113,5 +128,35 @@ class ReminderActionReceiver : BroadcastReceiver() {
         const val ACTION_SNOOZE = "com.meolist.action.REMINDER_SNOOZE"
         const val EXTRA_TASK_ID = "taskId"
         const val EXTRA_REMINDER_ID = "reminderId"
+    }
+}
+
+/** Fires when a running timer should have reached its goal. */
+class GoalAlarmReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != ACTION_FIRE) return
+        runAsync(context) { timerSync().sync() }
+    }
+
+    companion object {
+        const val ACTION_FIRE = "com.meolist.action.GOAL_ALARM"
+    }
+}
+
+/** Handles the "Stop" button of a timer notification. */
+class TimerActionReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val runningId = intent.getLongExtra(EXTRA_RUNNING_ID, -1)
+        if (intent.action != ACTION_STOP || runningId < 0) return
+        runAsync(context) {
+            // A timer that was already stopped elsewhere only needs its notification removed.
+            timerInteractor().stop(runningId)
+            timerSync().sync()
+        }
+    }
+
+    companion object {
+        const val ACTION_STOP = "com.meolist.action.TIMER_STOP"
+        const val EXTRA_RUNNING_ID = "runningId"
     }
 }

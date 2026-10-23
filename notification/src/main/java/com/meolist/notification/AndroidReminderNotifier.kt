@@ -36,7 +36,7 @@ class AndroidReminderNotifier @Inject constructor(
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
-            .setContentIntent(openTaskIntent(task.id))
+            .setContentIntent(DeepLinks.openIntent(context, DeepLinks.taskUri(task.id)))
             .addAction(0, context.getString(R.string.notif_action_complete), actionIntent(ReminderActionReceiver.ACTION_COMPLETE, task.id, reminderId))
             .addAction(0, context.getString(R.string.notif_action_snooze), actionIntent(ReminderActionReceiver.ACTION_SNOOZE, task.id, reminderId))
         if (task.note.isNotBlank()) {
@@ -66,15 +66,6 @@ class AndroidReminderNotifier @Inject constructor(
         return if (allDay) dateText else "$dateText ${dateTime.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"))}"
     }
 
-    private fun openTaskIntent(taskId: Long): PendingIntent {
-        val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
-            ?: Intent().setPackage(context.packageName)
-        launch.action = Intent.ACTION_VIEW
-        launch.data = taskUri(taskId)
-        launch.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        return PendingIntent.getActivity(context, 0, launch, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-    }
-
     private fun actionIntent(action: String, taskId: Long, reminderId: Long): PendingIntent {
         val intent = Intent(context, ReminderActionReceiver::class.java)
             .setAction(action)
@@ -87,16 +78,6 @@ class AndroidReminderNotifier @Inject constructor(
 
     companion object {
         private const val TAG_TASK = "task"
-        const val TASK_URI_PREFIX = "meolist://task/"
-
-        fun taskUri(taskId: Long): Uri = Uri.parse("$TASK_URI_PREFIX$taskId")
-
-        /** Task id from a notification's open intent, or null. */
-        fun taskIdFrom(intent: Intent?): Long? {
-            val data = intent?.data ?: return null
-            if (data.scheme != "meolist" || data.host != "task") return null
-            return data.lastPathSegment?.toLongOrNull()
-        }
 
         private fun notificationId(taskId: Long): Int = (taskId % Int.MAX_VALUE).toInt()
     }

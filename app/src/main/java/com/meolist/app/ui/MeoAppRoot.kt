@@ -37,6 +37,7 @@ import com.meolist.feature.settings.settingsGraph
 import com.meolist.feature.stats.statsGraph
 import com.meolist.feature.tasks.tasksGraph
 import com.meolist.feature.tracker.trackerGraph
+import com.meolist.notification.DeepLink
 
 private enum class TopLevel(val route: String, @StringRes val label: Int, val icon: ImageVector) {
     Tasks(Routes.TASKS, R.string.nav_tasks, Icons.Outlined.CheckCircle),
@@ -47,13 +48,19 @@ private enum class TopLevel(val route: String, @StringRes val label: Int, val ic
 }
 
 @Composable
-fun MeoAppRoot(openTaskId: Long? = null, onTaskOpened: () -> Unit = {}) {
+fun MeoAppRoot(deepLink: DeepLink? = null, onDeepLinkHandled: () -> Unit = {}) {
     val navController = rememberNavController()
-    LaunchedEffect(openTaskId) {
-        if (openTaskId != null) {
-            navController.navigate(Routes.taskDetail(openTaskId)) { launchSingleTop = true }
-            onTaskOpened()
+    LaunchedEffect(deepLink) {
+        when (deepLink) {
+            null -> return@LaunchedEffect
+            is DeepLink.Task -> navController.navigate(Routes.taskDetail(deepLink.taskId)) { launchSingleTop = true }
+            DeepLink.Tracker -> navController.navigate(Routes.TRACKER) {
+                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
         }
+        onDeepLinkHandled()
     }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination

@@ -92,12 +92,13 @@ import java.time.LocalTime
 fun TaskDetailRoute(
     onBack: () -> Unit,
     onOpenTask: (Long) -> Unit,
+    onAddActivityType: () -> Unit,
     viewModel: TaskDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(state.notFound) { if (state.notFound) onBack() }
     val task = state.task ?: return
-    TaskDetailScreen(state, task, viewModel, onBack, onOpenTask)
+    TaskDetailScreen(state, task, viewModel, onBack, onOpenTask, onAddActivityType)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -108,8 +109,10 @@ private fun TaskDetailScreen(
     vm: TaskDetailViewModel,
     onBack: () -> Unit,
     onOpenTask: (Long) -> Unit,
+    onAddActivityType: () -> Unit,
 ) {
     val editable = !task.isDeleted
+    val timer by vm.timer.collectAsStateWithLifecycle()
     var confirmDeleteForever by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val advance by vm.lastAdvance.collectAsStateWithLifecycle()
@@ -180,6 +183,7 @@ private fun TaskDetailScreen(
                 RepeatRow(task, state.today, task.dueDate(state.zone), editable, vm::setRepeat)
             }
             ReminderRow(task, state.reminders, editable, vm::setReminders)
+            TimerRow(timer, canSetListDefault = task.listId != null, editable = editable, vm = vm, onAddActivityType = onAddActivityType)
             PriorityRow(task, editable, vm)
             if (task.parentId == null) {
                 ListRow(state, task, editable, vm)

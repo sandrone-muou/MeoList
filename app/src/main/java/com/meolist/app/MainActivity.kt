@@ -10,29 +10,30 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.meolist.app.ui.MeoAppRoot
 import com.meolist.core.theme.MeoTheme
-import com.meolist.notification.AndroidReminderNotifier
+import com.meolist.notification.DeepLink
+import com.meolist.notification.DeepLinks
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    /** Task requested by a reminder notification, consumed once the UI has navigated to it. */
-    private var openTaskId by mutableStateOf<Long?>(null)
+    /** Screen requested by a notification, consumed once the UI has navigated to it. */
+    private var deepLink by mutableStateOf<DeepLink?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        // After a configuration change or process restore the back stack already holds the task.
-        if (savedInstanceState == null) openTaskId = AndroidReminderNotifier.taskIdFrom(intent)
+        // After a configuration change or process restore the back stack already holds the screen.
+        if (savedInstanceState == null) deepLink = DeepLinks.from(intent)
         setContent {
             MeoTheme {
-                MeoAppRoot(openTaskId = openTaskId, onTaskOpened = { openTaskId = null })
+                MeoAppRoot(deepLink = deepLink, onDeepLinkHandled = { deepLink = null })
             }
         }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        AndroidReminderNotifier.taskIdFrom(intent)?.let { openTaskId = it }
+        DeepLinks.from(intent)?.let { deepLink = it }
     }
 }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status bar icon for running timers: a stopwatch. Drawn for MeoList. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M9,1h6v2h-2v1.06A9,9 0,1 1,11 4.06V3H9zM12,6a7,7 0,1 0,0.01 0zM11,8h2v5.4l3.2,1.9 -1,1.7 -4.2,-2.5z" />
+</vector>

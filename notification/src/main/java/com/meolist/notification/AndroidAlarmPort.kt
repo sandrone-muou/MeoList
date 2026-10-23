@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import com.meolist.domain.reminder.AlarmPort
+import com.meolist.domain.tracker.GoalAlarmPort
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,33 +22,57 @@ class AndroidAlarmPort @Inject constructor(
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
 
     override fun schedule(atMillis: Long?) {
-        val intent = alarmIntent()
-        if (atMillis == null) {
-            alarmManager.cancel(intent)
-            return
-        }
-        if (canScheduleExact()) {
-            try {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, intent)
-                return
-            } catch (_: SecurityException) {
-                // Permission revoked between the check and the call.
-            }
-        }
-        alarmManager.setWindow(AlarmManager.RTC_WAKEUP, atMillis, FALLBACK_WINDOW_MS, intent)
+        alarmManager.scheduleOrCancel(atMillis, alarmIntent())
     }
 
-    override fun canScheduleExact(): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
+    override fun canScheduleExact(): Boolean = alarmManager.canExact()
 
     private fun alarmIntent(): PendingIntent = PendingIntent.getBroadcast(
         context,
-        0,
+        REQUEST_REMINDER,
         Intent(context, ReminderAlarmReceiver::class.java).setAction(ReminderAlarmReceiver.ACTION_FIRE),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
+}
 
-    private companion object {
-        const val FALLBACK_WINDOW_MS = 10 * 60_000L
+/** Arms the alarm for the moment a running timer reaches its goal. */
+@Singleton
+class AndroidGoalAlarmPort @Inject constructor(
+    @ApplicationContext private val context: Context,
+) : GoalAlarmPort {
+    private val alarmManager = context.getSystemService(AlarmManager::class.java)
+
+    override fun schedule(atMillis: Long?) {
+        alarmManager.scheduleOrCancel(atMillis, alarmIntent())
     }
+
+    private fun alarmIntent(): PendingIntent = PendingIntent.getBroadcast(
+        context,
+        REQUEST_GOAL,
+        Intent(context, GoalAlarmReceiver::class.java).setAction(GoalAlarmReceiver.ACTION_FIRE),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
+}
+
+private const val REQUEST_REMINDER = 0
+private const val REQUEST_GOAL = 1
+private const val FALLBACK_WINDOW_MS = 10 * 60_000L
+
+private fun AlarmManager.canExact(): Boolean =
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.S || canScheduleExactAlarms()
+
+private fun AlarmManager.scheduleOrCancel(atMillis: Long?, intent: PendingIntent) {
+    if (atMillis == null) {
+        cancel(intent)
+        return
+    }
+    if (canExact()) {
+        try {
+            setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, intent)
+            return
+        } catch (_: SecurityException) {
+            // Permission revoked between the check and the call.
+        }
+    }
+    setWindow(AlarmManager.RTC_WAKEUP, atMillis, FALLBACK_WINDOW_MS, intent)
 }

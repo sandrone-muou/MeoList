@@ -147,4 +147,11 @@
     <plurals name="tasks_days">
         <item quantity="other">%1$d 天</item>
     </plurals>
+    <string name="tasks_timer_start">开始计时</string>
+    <string name="tasks_timer_total">已计时 %1$s</string>
+    <string name="tasks_timer_pick">选择活动</string>
+    <string name="tasks_timer_stop">停止计时</string>
+    <string name="tasks_timer_no_types">还没有活动，先新建一个再为任务计时。</string>
+    <string name="tasks_timer_list_default">设为该清单的默认活动</string>
+    <string name="tasks_timer_new_type">新建活动</string>
 </resources>
