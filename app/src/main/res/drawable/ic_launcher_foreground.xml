@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Clock ring -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:pathData="M54,30a24,24 0,1 1,-0.01 0z" />
+    <!-- Stem -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M54,70 L54,50" />
+    <!-- Left leaf -->
+    <path
+        android:fillColor="#BCF0B4"
+        android:pathData="M54,54 C46,54 41,48 41,41 C49,41 54,46 54,54z" />
+    <!-- Right leaf -->
+    <path
+        android:fillColor="#FFDCBD"
+        android:pathData="M54,50 C54,42 60,37 67,37 C67,45 62,50 54,50z" />
+    <!-- Soil -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M44,68 L64,68 C64,71 61,73 58,73 L50,73 C47,73 44,71 44,68z" />
+</vector>

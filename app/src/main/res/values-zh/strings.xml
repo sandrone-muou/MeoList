@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MeoList</string>
+    <string name="nav_tasks">任务</string>
+    <string name="nav_tracker">计时</string>
+    <string name="nav_habits">习惯</string>
+    <string name="nav_farm">农场</string>
+    <string name="nav_more">更多</string>
+    <string name="more_title">更多</string>
+    <string name="more_calendar">日历</string>
+    <string name="more_calendar_desc">按月查看任务、习惯与倒数日</string>
+    <string name="more_quadrant">四象限</string>
+    <string name="more_quadrant_desc">按重要与紧急程度整理任务</string>
+    <string name="more_countdown">倒数日</string>
+    <string name="more_countdown_desc">生日、纪念日与截止日</string>
+    <string name="more_stats">统计</string>
+    <string name="more_stats_desc">时间分布与任务完成情况</string>
+    <string name="more_records">时间记录</string>
+    <string name="more_records_desc">查看并编辑计时记录</string>
+    <string name="more_achievements">成就</string>
+    <string name="more_achievements_desc">在农场获得的徽章</string>
+    <string name="more_settings">设置</string>
+    <string name="more_settings_desc">偏好、提醒与备份</string>
+</resources>

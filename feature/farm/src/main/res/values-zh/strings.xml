@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="farm_title">计时农场</string>
+    <string name="farm_achievements_title">成就</string>
+</resources>
