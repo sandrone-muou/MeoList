@@ -12,4 +12,7 @@
     <string name="core_delete">删除</string>
     <string name="core_undo">撤销</string>
     <string name="core_more_options">更多选项</string>
+    <string name="core_perm_notifications_off">通知已关闭，提醒将无法显示。</string>
+    <string name="core_perm_exact_alarm_off">未允许精确闹钟，提醒可能会延迟几分钟。</string>
+    <string name="core_perm_allow">去允许</string>
 </resources>

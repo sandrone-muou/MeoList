@@ -111,6 +111,7 @@ class TaskRepositoryImpl @Inject constructor(
         dao.observeTaskTags().map { refs -> refs.map { TaskTagRef(it.taskId, it.tagId) } }
 
     override fun observeTagIds(taskId: Long): Flow<List<Long>> = dao.observeTagIds(taskId)
+    override suspend fun getTagIds(taskId: Long): Set<Long> = dao.getTagIds(taskId).toSet()
     override suspend fun setTags(taskId: Long, tagIds: Set<Long>) = dao.setTags(taskId, tagIds)
 }
 

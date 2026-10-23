@@ -13,6 +13,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -33,11 +35,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.today
+import com.meolist.domain.task.RepeatAdvance
 import com.meolist.domain.task.TaskInteractor
 import com.meolist.domain.task.TaskItem
 import com.meolist.domain.task.TaskListRepository
 import com.meolist.domain.task.TaskRepository
 import com.meolist.feature.tasks.R
+import com.meolist.feature.tasks.RepeatAdvanceEffect
 import com.meolist.feature.tasks.TaskRow
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -70,7 +74,18 @@ class SearchViewModel @Inject constructor(
         tasks.map { TaskItem(it, it.listId?.let(byId::get), emptyList(), 0, 0) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun setDone(id: Long, done: Boolean) = viewModelScope.launch { interactor.setDone(id, done) }
+    private val _lastAdvance = MutableStateFlow<RepeatAdvance?>(null)
+    val lastAdvance: StateFlow<RepeatAdvance?> = _lastAdvance
+
+    fun setDone(id: Long, done: Boolean) = viewModelScope.launch {
+        interactor.setDone(id, done)?.let { _lastAdvance.value = it }
+    }
+
+    fun undoRepeat(advance: RepeatAdvance) = viewModelScope.launch { interactor.undoRepeat(advance) }
+
+    fun consumeAdvance() {
+        _lastAdvance.value = null
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,8 +96,12 @@ fun SearchRoute(onBack: () -> Unit, onOpenTask: (Long) -> Unit, vm: SearchViewMo
     val focus = remember { FocusRequester() }
     val today = vm.clock.today()
     val zone = vm.clock.zone()
+    val snackbar = remember { SnackbarHostState() }
+    val advance by vm.lastAdvance.collectAsStateWithLifecycle()
+    RepeatAdvanceEffect(advance, snackbar, today, zone, onUndo = { vm.undoRepeat(it) }, onConsumed = vm::consumeAdvance)
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 navigationIcon = {

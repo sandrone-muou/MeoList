@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "845549f84dfd0c19bff3e4d310216272",
+    "identityHash": "5c10c023f3b1d9694d3e1a77216b76e0",
     "entities": [
       {
         "tableName": "list_folder",
@@ -397,12 +397,109 @@
             ]
           }
         ]
+      },
+      {
+        "tableName": "reminder",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `ownerType` INTEGER NOT NULL, `ownerId` INTEGER NOT NULL, `kind` INTEGER NOT NULL, `offsetMin` INTEGER NOT NULL, `minuteOfDay` INTEGER, `nextFireAt` INTEGER, `snoozedUntil` INTEGER, `enabled` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerType",
+            "columnName": "ownerType",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerId",
+            "columnName": "ownerId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "offsetMin",
+            "columnName": "offsetMin",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "minuteOfDay",
+            "columnName": "minuteOfDay",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "nextFireAt",
+            "columnName": "nextFireAt",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "snoozedUntil",
+            "columnName": "snoozedUntil",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "enabled",
+            "columnName": "enabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_reminder_ownerType_ownerId",
+            "unique": false,
+            "columnNames": [
+              "ownerType",
+              "ownerId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_reminder_ownerType_ownerId` ON `${TABLE_NAME}` (`ownerType`, `ownerId`)"
+          },
+          {
+            "name": "index_reminder_nextFireAt",
+            "unique": false,
+            "columnNames": [
+              "nextFireAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_reminder_nextFireAt` ON `${TABLE_NAME}` (`nextFireAt`)"
+          },
+          {
+            "name": "index_reminder_snoozedUntil",
+            "unique": false,
+            "columnNames": [
+              "snoozedUntil"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_reminder_snoozedUntil` ON `${TABLE_NAME}` (`snoozedUntil`)"
+          }
+        ],
+        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '845549f84dfd0c19bff3e4d310216272')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5c10c023f3b1d9694d3e1a77216b76e0')"
     ]
   }
 }

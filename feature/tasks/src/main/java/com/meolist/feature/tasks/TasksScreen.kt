@@ -75,6 +75,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.meolist.core.ui.ColorDot
 import com.meolist.core.ui.ConfirmDialog
+import com.meolist.domain.task.RepeatAdvance
 import com.meolist.domain.task.TaskFilter
 import com.meolist.domain.task.TaskItem
 import com.meolist.domain.task.TaskSection
@@ -88,8 +89,12 @@ fun TasksRoute(
     viewModel: TasksViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val advance by viewModel.lastAdvance.collectAsStateWithLifecycle()
     TasksScreen(
         state = state,
+        advance = advance,
+        onUndoRepeat = viewModel::undoRepeat,
+        onAdvanceShown = viewModel::consumeAdvance,
         onSelectFilter = viewModel::selectFilter,
         onOpenTask = onOpenTask,
         onSearch = onSearch,
@@ -108,6 +113,9 @@ fun TasksRoute(
 @Composable
 private fun TasksScreen(
     state: TasksUiState,
+    advance: RepeatAdvance?,
+    onUndoRepeat: (RepeatAdvance) -> Unit,
+    onAdvanceShown: () -> Unit,
     onSelectFilter: (TaskFilter) -> Unit,
     onOpenTask: (Long) -> Unit,
     onSearch: () -> Unit,
@@ -127,6 +135,7 @@ private fun TasksScreen(
     var confirmEmptyTrash by remember { mutableStateOf(false) }
     val movedToTrash = stringResource(R.string.tasks_moved_to_trash)
     val undo = stringResource(com.meolist.core.R.string.core_undo)
+    RepeatAdvanceEffect(advance, snackbar, state.today, state.zone, onUndo = onUndoRepeat, onConsumed = onAdvanceShown)
 
     val trashWithUndo: (Long) -> Unit = { id ->
         onTrash(id)
@@ -279,6 +288,7 @@ private fun TaskGroupsList(
                                 onToggle = { onToggle(item.task.id, it) },
                                 onClick = { onOpenTask(item.task.id) },
                                 modifier = Modifier.background(MaterialTheme.colorScheme.surface),
+                                hasReminder = item.task.id in state.reminderTaskIds,
                             )
                         }
                     }

@@ -3,10 +3,12 @@ package com.meolist.data.di
 import android.content.Context
 import androidx.room.Room
 import com.meolist.data.db.MeoDatabase
+import com.meolist.data.db.dao.ReminderDao
 import com.meolist.data.db.dao.TagDao
 import com.meolist.data.db.dao.TaskDao
 import com.meolist.data.db.dao.TaskListDao
 import com.meolist.data.prefs.DataStoreAppPreferences
+import com.meolist.data.repo.ReminderRepositoryImpl
 import com.meolist.data.repo.TagRepositoryImpl
 import com.meolist.domain.settings.AppPreferences
 import com.meolist.data.repo.TaskListRepositoryImpl
@@ -14,6 +16,7 @@ import com.meolist.data.repo.TaskRepositoryImpl
 import com.meolist.domain.common.ApplicationScope
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.SystemClock
+import com.meolist.domain.reminder.ReminderRepository
 import com.meolist.domain.task.TagRepository
 import com.meolist.domain.task.TaskListRepository
 import com.meolist.domain.task.TaskRepository
@@ -42,6 +45,7 @@ object DatabaseModule {
     @Provides fun taskDao(db: MeoDatabase): TaskDao = db.taskDao()
     @Provides fun taskListDao(db: MeoDatabase): TaskListDao = db.taskListDao()
     @Provides fun tagDao(db: MeoDatabase): TagDao = db.tagDao()
+    @Provides fun reminderDao(db: MeoDatabase): ReminderDao = db.reminderDao()
 
     @Provides
     @Singleton
@@ -59,5 +63,6 @@ abstract class RepositoryModule {
     @Binds abstract fun taskRepository(impl: TaskRepositoryImpl): TaskRepository
     @Binds abstract fun taskListRepository(impl: TaskListRepositoryImpl): TaskListRepository
     @Binds abstract fun tagRepository(impl: TagRepositoryImpl): TagRepository
+    @Binds abstract fun reminderRepository(impl: ReminderRepositoryImpl): ReminderRepository
     @Binds abstract fun appPreferences(impl: DataStoreAppPreferences): AppPreferences
 }

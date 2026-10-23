@@ -44,6 +44,8 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -79,6 +81,7 @@ import com.meolist.domain.task.Task
 import com.meolist.feature.tasks.ListMenu
 import com.meolist.feature.tasks.PriorityMenu
 import com.meolist.feature.tasks.R
+import com.meolist.feature.tasks.RepeatAdvanceEffect
 import com.meolist.feature.tasks.TaskCheckbox
 import com.meolist.feature.tasks.dueLabel
 import com.meolist.feature.tasks.priorityColor
@@ -108,8 +111,12 @@ private fun TaskDetailScreen(
 ) {
     val editable = !task.isDeleted
     var confirmDeleteForever by remember { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
+    val advance by vm.lastAdvance.collectAsStateWithLifecycle()
+    RepeatAdvanceEffect(advance, snackbar, state.today, state.zone, onUndo = vm::undoRepeat, onConsumed = vm::consumeAdvance)
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = {},
@@ -169,6 +176,10 @@ private fun TaskDetailScreen(
             HorizontalDivider(Modifier.padding(horizontal = 16.dp))
 
             DueRow(state, task, editable, vm)
+            if (task.parentId == null) {
+                RepeatRow(task, state.today, task.dueDate(state.zone), editable, vm::setRepeat)
+            }
+            ReminderRow(task, state.reminders, editable, vm::setReminders)
             PriorityRow(task, editable, vm)
             if (task.parentId == null) {
                 ListRow(state, task, editable, vm)
@@ -226,7 +237,7 @@ private fun TitleRow(task: Task, editable: Boolean, onDone: (Boolean) -> Unit, o
 }
 
 @Composable
-private fun DetailRow(
+internal fun DetailRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     value: String,

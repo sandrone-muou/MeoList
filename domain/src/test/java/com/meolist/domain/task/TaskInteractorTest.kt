@@ -1,6 +1,10 @@
 package com.meolist.domain.task
 
+import com.meolist.domain.reminder.ReminderScheduler
+import com.meolist.domain.testing.FakeAlarmPort
 import com.meolist.domain.testing.FakeClock
+import com.meolist.domain.testing.FakeNotifier
+import com.meolist.domain.testing.FakeReminderRepository
 import com.meolist.domain.testing.FakeTaskRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -12,7 +16,8 @@ class TaskInteractorTest {
 
     private val repo = FakeTaskRepository()
     private val clock = FakeClock(nowMs = 1_000L)
-    private val interactor = TaskInteractor(repo, clock)
+    private val scheduler = ReminderScheduler(FakeReminderRepository(repo), repo, FakeAlarmPort(), FakeNotifier(), clock)
+    private val interactor = TaskInteractor(repo, clock, scheduler)
 
     @Test
     fun add_trimsTitle_setsTimestamps_andTags() = runTest {

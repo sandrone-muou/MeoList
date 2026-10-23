@@ -7,7 +7,12 @@ import com.meolist.core.navigation.Routes
 import com.meolist.domain.common.ApplicationScope
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.today
+import com.meolist.domain.reminder.Reminder
+import com.meolist.domain.reminder.ReminderOwner
+import com.meolist.domain.reminder.ReminderRepository
+import com.meolist.domain.repeat.RepeatRule
 import com.meolist.domain.task.Priority
+import com.meolist.domain.task.RepeatAdvance
 import com.meolist.domain.task.Tag
 import com.meolist.domain.task.TagRepository
 import com.meolist.domain.task.Task
@@ -43,6 +48,7 @@ data class TaskDetailState(
     val lists: List<TaskList> = emptyList(),
     val tags: List<Tag> = emptyList(),
     val tagIds: Set<Long> = emptySet(),
+    val reminders: List<Reminder> = emptyList(),
     val today: LocalDate = LocalDate.now(),
     val zone: ZoneId = ZoneId.systemDefault(),
 )
@@ -54,6 +60,7 @@ class TaskDetailViewModel @Inject constructor(
     listRepo: TaskListRepository,
     private val tagRepo: TagRepository,
     private val interactor: TaskInteractor,
+    reminderRepo: ReminderRepository,
     private val clock: Clock,
     @ApplicationScope private val appScope: CoroutineScope,
 ) : ViewModel() {
@@ -91,8 +98,8 @@ class TaskDetailViewModel @Inject constructor(
         repo.observeSubtasks(taskId),
         listRepo.observeLists(),
         tagRepo.observeTags(),
-        repo.observeTagIds(taskId),
-    ) { (task, nf, parent), subtasks, lists, tags, tagIds ->
+        combine(repo.observeTagIds(taskId), reminderRepo.observeForOwner(ReminderOwner.TASK, taskId)) { ids, r -> ids to r },
+    ) { (task, nf, parent), subtasks, lists, tags, (tagIds, reminders) ->
         TaskDetailState(
             task = task,
             notFound = nf,
@@ -101,6 +108,7 @@ class TaskDetailViewModel @Inject constructor(
             lists = lists.filter { !it.archived || it.id == task?.listId },
             tags = tags,
             tagIds = tagIds.toSet(),
+            reminders = reminders,
             today = clock.today(),
             zone = clock.zone(),
         )
@@ -117,9 +125,36 @@ class TaskDetailViewModel @Inject constructor(
     fun setPriority(priority: Priority) = edit { it.copy(priority = priority) }
     fun setList(listId: Long?) = edit { it.copy(listId = listId) }
 
+    /** Set after completing a repeating task, so the screen can offer to undo it. */
+    private val _lastAdvance = MutableStateFlow<RepeatAdvance?>(null)
+    val lastAdvance: StateFlow<RepeatAdvance?> = _lastAdvance
+
     fun setDone(done: Boolean) {
         flush()
-        appScope.launch { interactor.setDone(taskId, done) }
+        appScope.launch { interactor.setDone(taskId, done)?.let { _lastAdvance.value = it } }
+    }
+
+    fun undoRepeat(advance: RepeatAdvance) {
+        appScope.launch { interactor.undoRepeat(advance) }
+    }
+
+    fun consumeAdvance() {
+        _lastAdvance.value = null
+    }
+
+    /** Repeating needs a date to count from: without one the task becomes due today. */
+    fun setRepeat(rule: RepeatRule?, fromCompletion: Boolean) = edit { task ->
+        val withRule = task.copy(repeatRule = rule?.toRRule(), repeatFromCompletion = rule != null && fromCompletion)
+        if (rule != null && withRule.dueAt == null) {
+            withRule.copy(dueAt = dueMillis(clock.today(), null, clock.zone()), allDay = true)
+        } else {
+            withRule
+        }
+    }
+
+    fun setReminders(reminders: List<Reminder>) {
+        flush()
+        appScope.launch { interactor.setReminders(taskId, reminders) }
     }
 
     fun setTags(tagIds: Set<Long>) {
@@ -139,7 +174,9 @@ class TaskDetailViewModel @Inject constructor(
         viewModelScope.launch { interactor.add(title = title, parentId = taskId) }
     }
 
-    fun setSubtaskDone(id: Long, done: Boolean) = viewModelScope.launch { interactor.setDone(id, done) }
+    fun setSubtaskDone(id: Long, done: Boolean) = viewModelScope.launch {
+        interactor.setDone(id, done)?.let { _lastAdvance.value = it }
+    }
 
     fun renameSubtask(subtask: Task, title: String) {
         if (title.isBlank()) return

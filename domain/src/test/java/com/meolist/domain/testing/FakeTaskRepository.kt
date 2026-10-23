@@ -57,6 +57,8 @@ class FakeTaskRepository : TaskRepository {
     override fun observeTaskTags(): Flow<List<TaskTagRef>> = tags.map { it.toList() }
     override fun observeTagIds(taskId: Long): Flow<List<Long>> = tags.map { s -> s.filter { it.taskId == taskId }.map { it.tagId } }
 
+    override suspend fun getTagIds(taskId: Long): Set<Long> = tagIdsOf(taskId)
+
     override suspend fun setTags(taskId: Long, tagIds: Set<Long>) {
         tags.value = tags.value.filterNot { it.taskId == taskId }.toSet() + tagIds.map { TaskTagRef(taskId, it) }
     }

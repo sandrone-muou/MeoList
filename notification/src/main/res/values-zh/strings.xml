@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_reminders">提醒</string>
+    <string name="notif_channel_reminders_desc">任务、习惯与倒数日提醒</string>
+    <string name="notif_action_complete">完成</string>
+    <string name="notif_action_snooze">10 分钟后提醒</string>
+    <string name="notif_today">今天</string>
+    <string name="notif_tomorrow">明天</string>
+</resources>

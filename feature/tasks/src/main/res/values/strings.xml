@@ -83,4 +83,72 @@
     <string name="tasks_archive_list">Archive list</string>
     <string name="tasks_delete_list">Delete list</string>
     <string name="tasks_delete_list_message">The list will be deleted and its tasks moved to the trash.</string>
+
+    <string name="tasks_repeat">Repeat</string>
+    <string name="tasks_repeat_daily">Daily</string>
+    <string name="tasks_repeat_every_days">Every %1$d days</string>
+    <string name="tasks_repeat_weekdays">Weekdays</string>
+    <string name="tasks_repeat_weekly_on">Weekly on %1$s</string>
+    <string name="tasks_repeat_every_weeks_on">Every %1$d weeks on %2$s</string>
+    <string name="tasks_repeat_monthly_on">Monthly %1$s</string>
+    <string name="tasks_repeat_every_months_on">Every %1$d months %2$s</string>
+    <string name="tasks_repeat_on_day">on day %1$d</string>
+    <string name="tasks_repeat_on_nth_weekday">on the %1$s %2$s</string>
+    <string name="tasks_repeat_on_last_day">on the last day</string>
+    <string name="tasks_repeat_yearly_on">Yearly on %1$s</string>
+    <string name="tasks_repeat_every_years_on">Every %1$d years on %2$s</string>
+    <string name="tasks_repeat_until">until %1$s</string>
+    <string name="tasks_repeat_after_completion_short">from completion</string>
+    <plurals name="tasks_repeat_times_left">
+        <item quantity="one">%1$d time left</item>
+        <item quantity="other">%1$d times left</item>
+    </plurals>
+    <string name="tasks_ordinal_1">first</string>
+    <string name="tasks_ordinal_2">second</string>
+    <string name="tasks_ordinal_3">third</string>
+    <string name="tasks_ordinal_4">fourth</string>
+    <string name="tasks_ordinal_5">fifth</string>
+    <string name="tasks_ordinal_last">last</string>
+    <string name="tasks_list_separator">", "</string>
+    <string name="tasks_label_separator">", "</string>
+    <string name="tasks_repeat_custom">Custom…</string>
+    <string name="tasks_freq_day">Day</string>
+    <string name="tasks_freq_week">Week</string>
+    <string name="tasks_freq_month">Month</string>
+    <string name="tasks_freq_year">Year</string>
+    <string name="tasks_repeat_every">Repeat every</string>
+    <string name="tasks_repeat_ends">Ends</string>
+    <string name="tasks_repeat_never_ends">Never</string>
+    <string name="tasks_repeat_after_count">After a number of times</string>
+    <string name="tasks_repeat_on_date">On a date</string>
+    <string name="tasks_repeat_from_completion">Repeat from completion date</string>
+    <string name="tasks_repeat_from_completion_desc">The next date is counted from the day you complete the task.</string>
+    <string name="tasks_repeat_next">Next: %1$s</string>
+
+    <string name="tasks_reminders">Reminders</string>
+    <string name="tasks_reminder_on_time">At the due time</string>
+    <string name="tasks_reminder_before">%1$s before</string>
+    <string name="tasks_reminder_same_day">On the day at %1$s</string>
+    <string name="tasks_reminder_days_before">%1$s before at %2$s</string>
+    <string name="tasks_reminder_needs_due">Set a due date first</string>
+    <string name="tasks_reminder_count">%1$d reminders</string>
+    <string name="tasks_reminder_custom">Custom…</string>
+    <string name="tasks_reminder_days_early">Days before</string>
+    <string name="tasks_reminder_at_time">Time</string>
+    <string name="tasks_reminder_how_early">How early</string>
+    <string name="tasks_unit_minutes">Minutes</string>
+    <string name="tasks_unit_hours">Hours</string>
+    <string name="tasks_unit_days">Days</string>
+    <plurals name="tasks_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <plurals name="tasks_hours">
+        <item quantity="one">%1$d hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <plurals name="tasks_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
 </resources>

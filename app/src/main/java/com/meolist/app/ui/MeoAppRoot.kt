@@ -16,6 +16,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -46,8 +47,14 @@ private enum class TopLevel(val route: String, @StringRes val label: Int, val ic
 }
 
 @Composable
-fun MeoAppRoot() {
+fun MeoAppRoot(openTaskId: Long? = null, onTaskOpened: () -> Unit = {}) {
     val navController = rememberNavController()
+    LaunchedEffect(openTaskId) {
+        if (openTaskId != null) {
+            navController.navigate(Routes.taskDetail(openTaskId)) { launchSingleTop = true }
+            onTaskOpened()
+        }
+    }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
     val showBottomBar = TopLevel.entries.any { it.route == destination?.route }

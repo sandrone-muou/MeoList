@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_reminders">Reminders</string>
+    <string name="notif_channel_reminders_desc">Task, habit and countdown reminders</string>
+    <string name="notif_action_complete">Complete</string>
+    <string name="notif_action_snooze">Snooze 10 min</string>
+    <string name="notif_today">Today</string>
+    <string name="notif_tomorrow">Tomorrow</string>
+</resources>

@@ -83,4 +83,68 @@
     <string name="tasks_archive_list">归档清单</string>
     <string name="tasks_delete_list">删除清单</string>
     <string name="tasks_delete_list_message">将删除该清单，其中的任务会移至回收站。</string>
+
+    <string name="tasks_repeat">重复</string>
+    <string name="tasks_repeat_daily">每天</string>
+    <string name="tasks_repeat_every_days">每 %1$d 天</string>
+    <string name="tasks_repeat_weekdays">工作日</string>
+    <string name="tasks_repeat_weekly_on">每%1$s</string>
+    <string name="tasks_repeat_every_weeks_on">每 %1$d 周的%2$s</string>
+    <string name="tasks_repeat_monthly_on">每月%1$s</string>
+    <string name="tasks_repeat_every_months_on">每 %1$d 个月的%2$s</string>
+    <string name="tasks_repeat_on_day">%1$d 日</string>
+    <string name="tasks_repeat_on_nth_weekday">%1$s%2$s</string>
+    <string name="tasks_repeat_on_last_day">最后一天</string>
+    <string name="tasks_repeat_yearly_on">每年%1$s</string>
+    <string name="tasks_repeat_every_years_on">每 %1$d 年的%2$s</string>
+    <string name="tasks_repeat_until">截至 %1$s</string>
+    <string name="tasks_repeat_after_completion_short">按完成日期</string>
+    <plurals name="tasks_repeat_times_left">
+        <item quantity="other">剩 %1$d 次</item>
+    </plurals>
+    <string name="tasks_ordinal_1">第一个</string>
+    <string name="tasks_ordinal_2">第二个</string>
+    <string name="tasks_ordinal_3">第三个</string>
+    <string name="tasks_ordinal_4">第四个</string>
+    <string name="tasks_ordinal_5">第五个</string>
+    <string name="tasks_ordinal_last">最后一个</string>
+    <string name="tasks_list_separator">、</string>
+    <string name="tasks_label_separator">，</string>
+    <string name="tasks_repeat_custom">自定义…</string>
+    <string name="tasks_freq_day">天</string>
+    <string name="tasks_freq_week">周</string>
+    <string name="tasks_freq_month">月</string>
+    <string name="tasks_freq_year">年</string>
+    <string name="tasks_repeat_every">间隔</string>
+    <string name="tasks_repeat_ends">结束</string>
+    <string name="tasks_repeat_never_ends">永不结束</string>
+    <string name="tasks_repeat_after_count">按次数结束</string>
+    <string name="tasks_repeat_on_date">按日期结束</string>
+    <string name="tasks_repeat_from_completion">按完成日期重复</string>
+    <string name="tasks_repeat_from_completion_desc">下次日期从完成当天起算。</string>
+    <string name="tasks_repeat_next">下次：%1$s</string>
+
+    <string name="tasks_reminders">提醒</string>
+    <string name="tasks_reminder_on_time">准时提醒</string>
+    <string name="tasks_reminder_before">提前 %1$s</string>
+    <string name="tasks_reminder_same_day">当天 %1$s</string>
+    <string name="tasks_reminder_days_before">提前 %1$s，%2$s</string>
+    <string name="tasks_reminder_needs_due">需先设置日期</string>
+    <string name="tasks_reminder_count">%1$d 个提醒</string>
+    <string name="tasks_reminder_custom">自定义…</string>
+    <string name="tasks_reminder_days_early">提前天数</string>
+    <string name="tasks_reminder_at_time">时间</string>
+    <string name="tasks_reminder_how_early">提前多久</string>
+    <string name="tasks_unit_minutes">分钟</string>
+    <string name="tasks_unit_hours">小时</string>
+    <string name="tasks_unit_days">天</string>
+    <plurals name="tasks_minutes">
+        <item quantity="other">%1$d 分钟</item>
+    </plurals>
+    <plurals name="tasks_hours">
+        <item quantity="other">%1$d 小时</item>
+    </plurals>
+    <plurals name="tasks_days">
+        <item quantity="other">%1$d 天</item>
+    </plurals>
 </resources>

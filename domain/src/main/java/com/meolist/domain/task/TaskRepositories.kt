@@ -27,6 +27,7 @@ interface TaskRepository {
 
     fun observeTaskTags(): Flow<List<TaskTagRef>>
     fun observeTagIds(taskId: Long): Flow<List<Long>>
+    suspend fun getTagIds(taskId: Long): Set<Long>
     suspend fun setTags(taskId: Long, tagIds: Set<Long>)
 }
 

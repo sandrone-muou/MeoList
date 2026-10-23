@@ -4,9 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.today
+import com.meolist.domain.reminder.ReminderOwner
+import com.meolist.domain.reminder.ReminderRepository
 import com.meolist.domain.settings.AppPreferences
 import com.meolist.domain.task.ListFolder
 import com.meolist.domain.task.Priority
+import com.meolist.domain.task.RepeatAdvance
 import com.meolist.domain.task.Tag
 import com.meolist.domain.task.TagRepository
 import com.meolist.domain.task.TaskFilter
@@ -45,6 +48,8 @@ data class TasksUiState(
     val counts: Map<String, Int> = emptyMap(),
     val today: LocalDate = LocalDate.now(),
     val zone: ZoneId = ZoneId.systemDefault(),
+    /** Tasks with at least one enabled reminder. */
+    val reminderTaskIds: Set<Long> = emptySet(),
 ) {
     val isTrash: Boolean get() = filter == TaskFilter.Trash
 }
@@ -59,6 +64,7 @@ class TasksViewModel @Inject constructor(
     tagRepo: TagRepository,
     private val interactor: TaskInteractor,
     private val prefs: AppPreferences,
+    reminderRepo: ReminderRepository,
     private val clock: Clock,
 ) : ViewModel() {
 
@@ -82,10 +88,11 @@ class TasksViewModel @Inject constructor(
     val state: StateFlow<TasksUiState> = combine(
         filter.filterNotNull(),
         snapshot,
-        taskRepo.observeTrash(),
-        listRepo.observeFolders(),
+        combine(taskRepo.observeTrash(), listRepo.observeFolders(), reminderRepo.observeOwnerIds(ReminderOwner.TASK)) { t, f, r ->
+            Triple(t, f, r)
+        },
         today,
-    ) { rawFilter, snap, trash, folders, day ->
+    ) { rawFilter, snap, (trash, folders, reminderIds), day ->
         val zone = clock.zone()
         val current = when (rawFilter) {
             is TaskFilter.OfList -> rawFilter.takeIf { f -> snap.lists.any { it.id == f.listId } }
@@ -109,6 +116,7 @@ class TasksViewModel @Inject constructor(
             counts = countFilters.associate { it.key() to TaskGrouping.openCount(it, snap, day, zone) },
             today = day,
             zone = zone,
+            reminderTaskIds = reminderIds,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TasksUiState())
 
@@ -154,7 +162,20 @@ class TasksViewModel @Inject constructor(
         }
     }
 
-    fun setDone(id: Long, done: Boolean) = viewModelScope.launch { interactor.setDone(id, done) }
+    private val _lastAdvance = MutableStateFlow<RepeatAdvance?>(null)
+    /** Set after completing a repeating task, so the screen can offer to undo it. */
+    val lastAdvance: StateFlow<RepeatAdvance?> = _lastAdvance
+
+    fun setDone(id: Long, done: Boolean) = viewModelScope.launch {
+        interactor.setDone(id, done)?.let { _lastAdvance.value = it }
+    }
+
+    fun undoRepeat(advance: RepeatAdvance) = viewModelScope.launch { interactor.undoRepeat(advance) }
+
+    fun consumeAdvance() {
+        _lastAdvance.value = null
+    }
+
     fun moveToTrash(id: Long) = viewModelScope.launch { interactor.moveToTrash(id) }
     fun restore(id: Long) = viewModelScope.launch { interactor.restore(id) }
     fun deletePermanently(id: Long) = viewModelScope.launch { interactor.deletePermanently(id) }

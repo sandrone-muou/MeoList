@@ -11,13 +11,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Notes
+import androidx.compose.material.icons.outlined.Alarm
 import androidx.compose.material.icons.outlined.Checklist
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +38,7 @@ import com.meolist.core.ui.timeLabel
 import com.meolist.domain.common.toLocalDateTime
 import com.meolist.domain.common.toMillis
 import com.meolist.domain.task.Priority
+import com.meolist.domain.task.RepeatAdvance
 import com.meolist.domain.task.TaskFilter
 import com.meolist.domain.task.TaskItem
 import com.meolist.domain.task.TaskSection
@@ -122,9 +129,11 @@ internal fun TaskRow(
     onToggle: (Boolean) -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    hasReminder: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val task = item.task
+    val repeats = task.repeatRule != null
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         modifier = modifier
@@ -144,7 +153,7 @@ internal fun TaskRow(
                 overflow = TextOverflow.Ellipsis,
             )
             val hasMeta = task.dueAt != null || (showList && item.list != null) || item.subtaskTotal > 0 ||
-                item.tags.isNotEmpty() || task.note.isNotBlank()
+                item.tags.isNotEmpty() || task.note.isNotBlank() || repeats || hasReminder
             if (hasMeta) {
                 Row(
                     modifier = Modifier.padding(top = 2.dp),
@@ -157,6 +166,12 @@ internal fun TaskRow(
                             dueLabel(due, task.allDay, today, zone),
                             if (overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                         )
+                    }
+                    if (repeats || (hasReminder && !task.isDone)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (repeats) Icon(Icons.Outlined.Repeat, null, Modifier.size(14.dp), tint = muted)
+                            if (hasReminder && !task.isDone) Icon(Icons.Outlined.Alarm, null, Modifier.size(14.dp), tint = muted)
+                        }
                     }
                     if (item.subtaskTotal > 0) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -186,4 +201,31 @@ internal fun TaskRow(
 @Composable
 private fun MetaText(text: String, color: Color) {
     Text(text, style = MaterialTheme.typography.labelMedium, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
+}
+
+/**
+ * After a repeating task is completed, shows where it moved to with an Undo action.
+ * [onConsumed] is called once the snackbar is gone.
+ */
+@Composable
+internal fun RepeatAdvanceEffect(
+    advance: RepeatAdvance?,
+    snackbar: SnackbarHostState,
+    today: LocalDate,
+    zone: ZoneId,
+    onUndo: (RepeatAdvance) -> Unit,
+    onConsumed: () -> Unit,
+) {
+    if (advance == null) return
+    val allDay = advance.previous.dueAt == null || advance.previous.allDay
+    val message = advance.nextDueAt
+        ?.let { stringResource(R.string.tasks_repeat_next, dueLabel(it, allDay, today, zone)) }
+        ?: stringResource(R.string.tasks_section_completed)
+    val undo = stringResource(com.meolist.core.R.string.core_undo)
+    LaunchedEffect(advance) {
+        snackbar.currentSnackbarData?.dismiss()
+        val result = snackbar.showSnackbar(message, undo, duration = SnackbarDuration.Short)
+        if (result == SnackbarResult.ActionPerformed) onUndo(advance)
+        onConsumed()
+    }
 }

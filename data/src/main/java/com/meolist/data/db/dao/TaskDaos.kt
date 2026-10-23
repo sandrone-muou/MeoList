@@ -77,6 +77,9 @@ interface TaskDao {
     @Query("SELECT tagId FROM task_tag WHERE taskId = :taskId")
     fun observeTagIds(taskId: Long): Flow<List<Long>>
 
+    @Query("SELECT tagId FROM task_tag WHERE taskId = :taskId")
+    suspend fun getTagIds(taskId: Long): List<Long>
+
     @Query("DELETE FROM task_tag WHERE taskId = :taskId")
     suspend fun clearTags(taskId: Long)
 
