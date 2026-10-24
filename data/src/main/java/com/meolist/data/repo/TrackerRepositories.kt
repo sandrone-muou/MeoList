@@ -16,6 +16,7 @@ import com.meolist.domain.tracker.ActivityTypeRepository
 import com.meolist.domain.tracker.GoalPeriod
 import com.meolist.domain.tracker.RunningTimer
 import com.meolist.domain.tracker.TimeRecord
+import com.meolist.domain.tracker.ReachedGoal
 import com.meolist.domain.tracker.TimeRecordRepository
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -48,6 +49,14 @@ class ActivityTypeRepositoryImpl @Inject constructor(
 
     override suspend fun markGoalReached(typeId: Long, period: GoalPeriod, periodStartDay: Long, at: Long): Boolean =
         dao.insertGoalReached(GoalReachedEntity(typeId, period.value, periodStartDay, at)) != -1L
+
+    override suspend fun getReachedGoals(): List<ReachedGoal> = dao.getGoalsReached().map {
+        ReachedGoal(it.typeId, GoalPeriod.fromValue(it.period), it.periodStartDay, it.reachedAt)
+    }
+
+    override fun observeReachedGoals(): Flow<List<ReachedGoal>> = dao.observeGoalsReached().map { list ->
+        list.map { ReachedGoal(it.typeId, GoalPeriod.fromValue(it.period), it.periodStartDay, it.reachedAt) }
+    }
 }
 
 class TimeRecordRepositoryImpl @Inject constructor(
@@ -63,6 +72,11 @@ class TimeRecordRepositoryImpl @Inject constructor(
 
     override fun observeRecords(from: Long, to: Long): Flow<List<TimeRecord>> =
         dao.observeRecords(from, to).map { it.map(RecordEntity::toDomain) }
+
+    override fun observeAllRecords(): Flow<List<TimeRecord>> =
+        dao.observeAllRecords().map { it.map(RecordEntity::toDomain) }
+
+    override suspend fun getAllRecords(): List<TimeRecord> = dao.getAllRecords().map { it.toDomain() }
 
     override suspend fun getRecords(from: Long, to: Long, typeId: Long?): List<TimeRecord> =
         (if (typeId == null) dao.getRecords(from, to) else dao.getRecordsOfType(from, to, typeId)).map { it.toDomain() }

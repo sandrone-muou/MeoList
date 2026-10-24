@@ -16,6 +16,7 @@ import com.meolist.domain.tracker.RunningTimerView
 import com.meolist.domain.tracker.TimeRecord
 import com.meolist.domain.tracker.TimeRecordRepository
 import com.meolist.domain.tracker.TimerNotifier
+import com.meolist.domain.tracker.ReachedGoal
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -61,7 +62,7 @@ class FakeTaskListRepository : TaskListRepository {
 class FakeTracker : ActivityTypeRepository, TimeRecordRepository {
     val types = MutableStateFlow<Map<Long, ActivityType>>(emptyMap())
     val goals = MutableStateFlow<List<ActivityGoal>>(emptyList())
-    val reached = mutableSetOf<Triple<Long, GoalPeriod, Long>>()
+    private val reached = MutableStateFlow<Set<Triple<Long, GoalPeriod, Long>>>(emptySet())
     val running = MutableStateFlow<Map<Long, RunningTimer>>(emptyMap())
     val records = MutableStateFlow<Map<Long, TimeRecord>>(emptyMap())
     private var nextId = 1L
@@ -94,8 +95,20 @@ class FakeTracker : ActivityTypeRepository, TimeRecordRepository {
         this.goals.value = this.goals.value.filter { it.typeId != typeId } + goals
     }
 
-    override suspend fun markGoalReached(typeId: Long, period: GoalPeriod, periodStartDay: Long, at: Long): Boolean =
-        reached.add(Triple(typeId, period, periodStartDay))
+    override suspend fun markGoalReached(typeId: Long, period: GoalPeriod, periodStartDay: Long, at: Long): Boolean {
+        val key = Triple(typeId, period, periodStartDay)
+        if (key in reached.value) return false
+        reached.value = reached.value + key
+        return true
+    }
+
+    override suspend fun getReachedGoals(): List<ReachedGoal> = reached.value.map {
+        ReachedGoal(it.first, it.second, it.third, 0)
+    }
+
+    override fun observeReachedGoals(): Flow<List<ReachedGoal>> = reached.map { set ->
+        set.map { ReachedGoal(it.first, it.second, it.third, 0) }
+    }
 
     // Running timers
     override fun observeRunning(): Flow<List<RunningTimer>> = running.map { it.values.toList() }
@@ -120,6 +133,11 @@ class FakeTracker : ActivityTypeRepository, TimeRecordRepository {
     // Records
     override fun observeRecords(from: Long, to: Long): Flow<List<TimeRecord>> =
         records.map { m -> m.values.filter { it.startAt < to && it.endAt > from }.sortedByDescending { it.startAt } }
+
+    override fun observeAllRecords(): Flow<List<TimeRecord>> =
+        records.map { m -> m.values.sortedBy { it.startAt } }
+
+    override suspend fun getAllRecords(): List<TimeRecord> = records.value.values.sortedBy { it.startAt }
 
     override suspend fun getRecords(from: Long, to: Long, typeId: Long?): List<TimeRecord> =
         records.value.values.filter { it.startAt < to && it.endAt > from && (typeId == null || it.typeId == typeId) }

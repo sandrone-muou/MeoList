@@ -2,6 +2,7 @@ package com.meolist.domain.habit
 
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.today
+import com.meolist.domain.farm.FarmHook
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -10,6 +11,7 @@ import javax.inject.Singleton
 class HabitInteractor @Inject constructor(
     private val habits: HabitRepository,
     private val clock: Clock,
+    private val farm: FarmHook = FarmHook.None,
 ) {
     suspend fun save(habit: Habit): Long {
         val clean = habit.copy(
@@ -26,7 +28,10 @@ class HabitInteractor @Inject constructor(
         habits.saveHabit(habit.copy(archived = archived))
     }
 
-    suspend fun delete(id: Long) = habits.deleteHabit(id)
+    suspend fun delete(id: Long) {
+        habits.deleteHabit(id)
+        farm.onNutrientsMayHaveChanged()
+    }
 
     /**
      * Sets the day's value, clamped to the daily target. Future days are ignored; past days can be
@@ -37,6 +42,7 @@ class HabitInteractor @Inject constructor(
         if (day > clock.today()) return
         val clamped = value.coerceIn(0, HabitRules.tapValue(habit))
         habits.setCheckIn(habitId, day, clamped)
+        farm.onNutrientsMayHaveChanged()
     }
 
     /** Checks the day off completely, or clears it when it is already done. */

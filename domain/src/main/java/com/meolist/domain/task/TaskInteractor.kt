@@ -5,6 +5,7 @@ import com.meolist.domain.common.startOfDayMillis
 import com.meolist.domain.common.toLocalDateTime
 import com.meolist.domain.common.toMillis
 import com.meolist.domain.common.today
+import com.meolist.domain.farm.FarmHook
 import com.meolist.domain.reminder.Reminder
 import com.meolist.domain.reminder.ReminderScheduler
 import com.meolist.domain.repeat.RecurrenceCalculator
@@ -33,6 +34,7 @@ class TaskInteractor @Inject constructor(
     private val clock: Clock,
     private val reminders: ReminderScheduler,
     private val completionHook: TaskCompletionHook = TaskCompletionHook.None,
+    private val farm: FarmHook = FarmHook.None,
 ) {
     suspend fun add(
         title: String,
@@ -90,6 +92,7 @@ class TaskInteractor @Inject constructor(
             repo.getSubtasks(stored.id).forEach { repo.update(it.copy(listId = merged.listId, updatedAt = now)) }
         }
         if (merged.dueAt != stored.dueAt || merged.allDay != stored.allDay) reminders.syncTask(stored.id)
+        if (merged.priority != stored.priority && merged.isDone) farm.onNutrientsMayHaveChanged()
     }
 
     /**
@@ -104,6 +107,7 @@ class TaskInteractor @Inject constructor(
             nextOccurrence(task)?.let { next ->
                 val advance = advance(task, next, now)
                 completionHook.onDoneChanged(id, true)
+                farm.onNutrientsMayHaveChanged()
                 return advance
             }
         }
@@ -116,6 +120,7 @@ class TaskInteractor @Inject constructor(
         )
         reminders.syncTask(id)
         completionHook.onDoneChanged(id, done)
+        farm.onNutrientsMayHaveChanged()
         return null
     }
 
@@ -126,6 +131,7 @@ class TaskInteractor @Inject constructor(
         repo.update(advance.previous.copy(updatedAt = clock.now()))
         advance.previousSubtasks.forEach { sub -> if (repo.get(sub.id) != null) repo.update(sub) }
         reminders.syncTask(advance.taskId)
+        farm.onNutrientsMayHaveChanged()
     }
 
     suspend fun setReminders(taskId: Long, settings: List<Reminder>) = reminders.setTaskReminders(taskId, settings)
@@ -133,6 +139,7 @@ class TaskInteractor @Inject constructor(
     suspend fun moveToTrash(id: Long) {
         repo.moveToTrash(id, clock.now())
         reminders.syncTask(id, withSubtasks = true)
+        farm.onNutrientsMayHaveChanged()
     }
 
     suspend fun restore(id: Long) {
@@ -146,16 +153,19 @@ class TaskInteractor @Inject constructor(
         }
         repo.restore(id)
         reminders.syncTask(id, withSubtasks = true)
+        farm.onNutrientsMayHaveChanged()
     }
 
     suspend fun deletePermanently(id: Long) {
         repo.deletePermanently(id)
         reminders.purgeOrphans()
+        farm.onNutrientsMayHaveChanged()
     }
 
     suspend fun emptyTrash() {
         repo.emptyTrash()
         reminders.purgeOrphans()
+        farm.onNutrientsMayHaveChanged()
     }
 
     suspend fun setTags(taskId: Long, tagIds: Set<Long>) = repo.setTags(taskId, tagIds)

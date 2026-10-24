@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.map
 class HabitRepositoryImpl @Inject constructor(private val dao: HabitDao) : HabitRepository {
     override fun observeHabits(): Flow<List<Habit>> = dao.observeHabits().map { list -> list.map { it.toModel() } }
 
+    override suspend fun getHabits(): List<Habit> = dao.getHabits().map { it.toModel() }
+
     override suspend fun getHabit(id: Long): Habit? = dao.getHabit(id)?.toModel()
 
     override suspend fun saveHabit(habit: Habit): Long {
@@ -38,6 +40,8 @@ class HabitRepositoryImpl @Inject constructor(private val dao: HabitDao) : Habit
 
     override fun observeCheckIns(): Flow<List<HabitCheckIn>> =
         dao.observeCheckIns().map { list -> list.map { it.toModel() } }
+
+    override suspend fun getAllCheckIns(): List<HabitCheckIn> = dao.getAllCheckIns().map { it.toModel() }
 
     override suspend fun getCheckIns(habitId: Long): List<HabitCheckIn> = dao.getCheckIns(habitId).map { it.toModel() }
 

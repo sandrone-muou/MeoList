@@ -42,6 +42,9 @@ interface TaskDao {
     @Query("SELECT * FROM task WHERE id = :id")
     suspend fun get(id: Long): TaskEntity?
 
+    @Query("SELECT * FROM task WHERE deletedAt IS NULL")
+    suspend fun getAll(): List<TaskEntity>
+
     @Query("SELECT * FROM task WHERE parentId = :parentId")
     suspend fun getSubtasks(parentId: Long): List<TaskEntity>
 

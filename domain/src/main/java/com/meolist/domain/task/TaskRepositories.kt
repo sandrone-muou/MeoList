@@ -12,6 +12,8 @@ interface TaskRepository {
     fun search(query: String): Flow<List<Task>>
 
     suspend fun get(id: Long): Task?
+    /** Every non-deleted task, including completed ones and subtasks. */
+    suspend fun getAll(): List<Task>
     suspend fun getSubtasks(parentId: Long): List<Task>
     suspend fun insert(task: Task): Long
     suspend fun update(task: Task)

@@ -76,7 +76,19 @@ interface ActivityTypeRepository {
      * [periodStartDay] (epoch day). Returns false when that was already recorded.
      */
     suspend fun markGoalReached(typeId: Long, period: GoalPeriod, periodStartDay: Long, at: Long): Boolean
+
+    /** Every goal period ever reached, for the farm's nutrient ledger. */
+    suspend fun getReachedGoals(): List<ReachedGoal>
+    fun observeReachedGoals(): Flow<List<ReachedGoal>>
 }
+
+/** One goal period that was reached once. */
+data class ReachedGoal(
+    val typeId: Long,
+    val period: GoalPeriod,
+    val periodStartDay: Long,
+    val reachedAt: Long,
+)
 
 interface TimeRecordRepository {
     fun observeRunning(): Flow<List<RunningTimer>>
@@ -89,6 +101,9 @@ interface TimeRecordRepository {
 
     /** Records overlapping [from, to), newest first. */
     fun observeRecords(from: Long, to: Long): Flow<List<TimeRecord>>
+    /** Every record, for totals and the farm. */
+    fun observeAllRecords(): Flow<List<TimeRecord>>
+    suspend fun getAllRecords(): List<TimeRecord>
     /** Records overlapping [from, to), optionally of one type only. */
     suspend fun getRecords(from: Long, to: Long, typeId: Long? = null): List<TimeRecord>
     suspend fun getRecord(id: Long): TimeRecord?

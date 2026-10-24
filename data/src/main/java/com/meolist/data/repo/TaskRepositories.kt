@@ -98,6 +98,7 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     override suspend fun get(id: Long): Task? = dao.get(id)?.toDomain()
+    override suspend fun getAll(): List<Task> = dao.getAll().map { it.toDomain() }
     override suspend fun getSubtasks(parentId: Long): List<Task> = dao.getSubtasks(parentId).map { it.toDomain() }
     override suspend fun insert(task: Task): Long = dao.insert(task.toEntity().copy(id = 0))
     override suspend fun update(task: Task) = dao.update(task.toEntity())

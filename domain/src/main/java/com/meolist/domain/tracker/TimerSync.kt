@@ -2,6 +2,7 @@ package com.meolist.domain.tracker
 
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.today
+import com.meolist.domain.farm.FarmHook
 import com.meolist.domain.settings.AppPreferences
 import com.meolist.domain.task.TaskRepository
 import javax.inject.Inject
@@ -12,8 +13,8 @@ import kotlinx.coroutines.sync.withLock
 
 /**
  * Brings everything outside the database in line with the timers: the ongoing notifications,
- * reached-goal announcements and the alarm for the next goal. Call after any timer or record change,
- * on app start and after boot.
+ * reached-goal announcements and the alarm for the next goal. Every timer or record change ends
+ * here, which is also when the farm learns about new nutrients.
  */
 @Singleton
 class TimerSync @Inject constructor(
@@ -24,6 +25,7 @@ class TimerSync @Inject constructor(
     private val notifier: TimerNotifier,
     private val alarm: GoalAlarmPort,
     private val clock: Clock,
+    private val farm: FarmHook = FarmHook.None,
 ) {
     private val mutex = Mutex()
 
@@ -36,6 +38,7 @@ class TimerSync @Inject constructor(
         }
         notifier.showRunning(views)
         alarm.schedule(checkGoals(running, typeMap, now))
+        farm.onNutrientsMayHaveChanged()
     }
 
     /** Announces goals reached by now and returns when the next one will be reached by a running timer. */

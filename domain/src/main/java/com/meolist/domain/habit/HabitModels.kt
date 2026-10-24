@@ -64,6 +64,7 @@ data class HabitCheckIn(
 
 interface HabitRepository {
     fun observeHabits(): Flow<List<Habit>>
+    suspend fun getHabits(): List<Habit>
     suspend fun getHabit(id: Long): Habit?
     suspend fun saveHabit(habit: Habit): Long
     suspend fun deleteHabit(id: Long)
@@ -71,6 +72,7 @@ interface HabitRepository {
 
     /** Every check-in of every habit, newest first. */
     fun observeCheckIns(): Flow<List<HabitCheckIn>>
+    suspend fun getAllCheckIns(): List<HabitCheckIn>
     suspend fun getCheckIns(habitId: Long): List<HabitCheckIn>
     /** Stores [value] for the day; a value of 0 or less removes the row. */
     suspend fun setCheckIn(habitId: Long, day: LocalDate, value: Int)

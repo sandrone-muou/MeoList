@@ -25,6 +25,7 @@ class FakeTaskRepository : TaskRepository {
         tasks.map { m -> m.values.filter { it.deletedAt == null && it.title.contains(query, ignoreCase = true) } }
 
     override suspend fun get(id: Long): Task? = tasks.value[id]
+    override suspend fun getAll(): List<Task> = tasks.value.values.filter { it.deletedAt == null }.sortedBy { it.id }
     override suspend fun getSubtasks(parentId: Long): List<Task> = tasks.value.values.filter { it.parentId == parentId }
 
     override suspend fun insert(task: Task): Long {

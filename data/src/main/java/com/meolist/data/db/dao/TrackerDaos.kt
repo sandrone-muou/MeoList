@@ -57,6 +57,12 @@ interface ActivityTypeDao {
     /** Returns -1 when the row already exists. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertGoalReached(row: GoalReachedEntity): Long
+
+    @Query("SELECT * FROM goal_reached ORDER BY reachedAt")
+    suspend fun getGoalsReached(): List<GoalReachedEntity>
+
+    @Query("SELECT * FROM goal_reached ORDER BY reachedAt")
+    fun observeGoalsReached(): Flow<List<GoalReachedEntity>>
 }
 
 @Dao
@@ -84,6 +90,12 @@ interface TimeRecordDao {
 
     @Query("SELECT * FROM record WHERE startAt < :to AND endAt > :from ORDER BY startAt DESC")
     fun observeRecords(from: Long, to: Long): Flow<List<RecordEntity>>
+
+    @Query("SELECT * FROM record ORDER BY startAt")
+    fun observeAllRecords(): Flow<List<RecordEntity>>
+
+    @Query("SELECT * FROM record ORDER BY startAt")
+    suspend fun getAllRecords(): List<RecordEntity>
 
     @Query("SELECT * FROM record WHERE startAt < :to AND endAt > :from ORDER BY startAt")
     suspend fun getRecords(from: Long, to: Long): List<RecordEntity>
