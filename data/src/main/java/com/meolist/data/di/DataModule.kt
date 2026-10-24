@@ -13,6 +13,7 @@ import com.meolist.data.db.dao.TaskDao
 import com.meolist.data.db.dao.TaskListDao
 import com.meolist.data.db.dao.TimeRecordDao
 import com.meolist.data.prefs.DataStoreAppPreferences
+import com.meolist.data.backup.BackupServiceImpl
 import com.meolist.data.repo.ActivityTypeRepositoryImpl
 import com.meolist.data.repo.CountdownRepositoryImpl
 import com.meolist.data.repo.FarmRepositoryImpl
@@ -28,6 +29,7 @@ import com.meolist.domain.common.ApplicationScope
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.SystemClock
 import com.meolist.domain.common.TransactionRunner
+import com.meolist.domain.backup.BackupService
 import com.meolist.domain.countdown.CountdownRepository
 import com.meolist.domain.farm.FarmHook
 import com.meolist.domain.farm.FarmInteractor
@@ -59,8 +61,8 @@ object DatabaseModule {
     @Singleton
     fun database(@ApplicationContext context: Context): MeoDatabase =
         Room.databaseBuilder(context, MeoDatabase::class.java, MeoDatabase.NAME)
-            // Schema v1 is still evolving during development; frozen with real migrations before release.
-            .fallbackToDestructiveMigration()
+            // Schema v1 is frozen. Any later entity change must bump the version and ship a
+            // Migration together with a MigrationTestHelper test.
             .build()
 
     @Provides fun taskDao(db: MeoDatabase): TaskDao = db.taskDao()
@@ -99,4 +101,5 @@ abstract class RepositoryModule {
     @Binds abstract fun countdownRepository(impl: CountdownRepositoryImpl): CountdownRepository
     @Binds abstract fun farmRepository(impl: FarmRepositoryImpl): FarmRepository
     @Binds abstract fun farmHook(impl: FarmInteractor): FarmHook
+    @Binds abstract fun backupService(impl: BackupServiceImpl): BackupService
 }

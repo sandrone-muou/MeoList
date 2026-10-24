@@ -42,6 +42,16 @@ interface TaskDao {
     @Query("SELECT * FROM task WHERE id = :id")
     suspend fun get(id: Long): TaskEntity?
 
+    /** Every task including the trash, for backups. */
+    @Query("SELECT * FROM task ORDER BY id")
+    suspend fun getAllIncludingDeleted(): List<TaskEntity>
+
+    @Insert
+    suspend fun insertAll(tasks: List<TaskEntity>)
+
+    @Query("SELECT * FROM task_tag")
+    suspend fun getAllTaskTags(): List<TaskTagEntity>
+
     @Query("SELECT * FROM task WHERE deletedAt IS NULL")
     suspend fun getAll(): List<TaskEntity>
 
@@ -107,6 +117,12 @@ interface TaskListDao {
     @Query("SELECT * FROM task_list WHERE id = :id")
     suspend fun getList(id: Long): TaskListEntity?
 
+    @Query("SELECT * FROM task_list ORDER BY sortOrder, id")
+    suspend fun getLists(): List<TaskListEntity>
+
+    @Query("SELECT * FROM list_folder ORDER BY sortOrder, id")
+    suspend fun getFolders(): List<ListFolderEntity>
+
     @Upsert
     suspend fun upsertList(list: TaskListEntity): Long
 
@@ -130,6 +146,9 @@ interface TaskListDao {
 interface TagDao {
     @Query("SELECT * FROM tag ORDER BY name COLLATE NOCASE")
     fun observeTags(): Flow<List<TagEntity>>
+
+    @Query("SELECT * FROM tag ORDER BY id")
+    suspend fun getTags(): List<TagEntity>
 
     @Upsert
     suspend fun upsert(tag: TagEntity): Long

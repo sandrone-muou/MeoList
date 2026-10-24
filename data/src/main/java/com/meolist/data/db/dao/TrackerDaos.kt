@@ -27,6 +27,9 @@ interface ActivityTypeDao {
     @Insert
     suspend fun insertType(type: ActivityTypeEntity): Long
 
+    @Insert
+    suspend fun insertTypes(types: List<ActivityTypeEntity>)
+
     @Update
     suspend fun updateType(type: ActivityTypeEntity)
 
@@ -108,6 +111,12 @@ interface TimeRecordDao {
 
     @Insert
     suspend fun insertRecord(record: RecordEntity): Long
+
+    @Insert
+    suspend fun insertRecords(records: List<RecordEntity>)
+
+    @Insert
+    suspend fun insertRunningTimers(timers: List<RunningTimerEntity>)
 
     @Update
     suspend fun updateRecord(record: RecordEntity)

@@ -54,6 +54,9 @@ interface CountdownDao {
     @Query("SELECT * FROM countdown ORDER BY pinned DESC, sortOrder, id")
     fun observeAll(): Flow<List<CountdownEntity>>
 
+    @Query("SELECT * FROM countdown ORDER BY sortOrder, id")
+    suspend fun getAllCountdowns(): List<CountdownEntity>
+
     @Query("SELECT * FROM countdown WHERE id = :id")
     suspend fun get(id: Long): CountdownEntity?
 

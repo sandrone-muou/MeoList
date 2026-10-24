@@ -1,4 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_title">设置</string>
+    <string name="settings_section_timing">计时</string>
+    <string name="settings_multiple_timers">允许同时计时</string>
+    <string name="settings_multiple_timers_desc">多个活动可以同时运行。</string>
+    <string name="settings_ignore_short">忽略过短记录</string>
+    <string name="settings_ignore_short_desc">停止计时时丢弃短于此时长的记录。</string>
+    <string name="settings_ignore_none">不忽略</string>
+    <string name="settings_ignore_seconds">%1$d 秒</string>
+    <string name="settings_stop_on_complete">完成任务时停止计时</string>
+    <string name="settings_stop_on_complete_desc">完成关联任务时停止其计时。</string>
+    <string name="settings_section_tasks">任务与日历</string>
+    <string name="settings_urgent_days">紧急范围</string>
+    <string name="settings_urgent_days_desc">在此范围内到期的任务在四象限中视为紧急。</string>
+    <string name="settings_urgent_value">%1$d 天</string>
+    <string name="settings_week_start">每周起始日</string>
+    <string name="settings_section_reminders">提醒</string>
+    <string name="settings_default_reminder">默认提醒时间</string>
+    <string name="settings_default_reminder_desc">用于没有具体时间的全天事项。</string>
+    <string name="settings_section_data">数据</string>
+    <string name="settings_backup">备份数据</string>
+    <string name="settings_backup_desc">将全部清单、任务、记录、习惯和农场数据保存为 JSON。</string>
+    <string name="settings_restore">从备份恢复</string>
+    <string name="settings_restore_desc">用备份文件替换全部数据。</string>
+    <string name="settings_export_csv">导出记录 CSV</string>
+    <string name="settings_export_csv_desc">可导入表格的计时记录。</string>
+    <string name="settings_restore_confirm_title">恢复这个备份？</string>
+    <string name="settings_restore_confirm_text">当前全部数据将被替换，且无法撤销。</string>
+    <string name="settings_restore_action">恢复</string>
+    <string name="settings_backup_done">备份已保存。</string>
+    <string name="settings_csv_done">记录已导出。</string>
+    <string name="settings_restore_done">已恢复 %1$s、%2$s和%3$s。</string>
+    <plurals name="settings_restore_tasks">
+        <item quantity="other">%d 个任务</item>
+    </plurals>
+    <plurals name="settings_restore_records">
+        <item quantity="other">%d 条记录</item>
+    </plurals>
+    <plurals name="settings_restore_habits">
+        <item quantity="other">%d 个习惯</item>
+    </plurals>
+    <string name="settings_restore_invalid">这不是有效的 MeoList 备份文件。</string>
+    <string name="settings_action_failed">操作失败，请重试。</string>
+    <string name="settings_section_about">关于</string>
+    <string name="settings_about_version">MeoList %1$s</string>
+    <string name="settings_about_author">作者：sandrone-muou</string>
+    <string name="settings_about_license">Apache License 2.0</string>
+    <string name="settings_app_version">0.1.0</string>
 </resources>
