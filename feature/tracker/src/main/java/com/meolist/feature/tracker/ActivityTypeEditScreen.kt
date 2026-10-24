@@ -59,6 +59,7 @@ import com.meolist.core.navigation.Routes
 import com.meolist.core.ui.ActivityIcons
 import com.meolist.core.ui.ColorPicker
 import com.meolist.core.ui.ConfirmDialog
+import com.meolist.core.ui.MeoIconPicker
 import com.meolist.core.ui.MeoPalette
 import com.meolist.core.ui.durationText
 import com.meolist.domain.common.ApplicationScope
@@ -218,25 +219,11 @@ fun ActivityTypeEditRoute(onBack: () -> Unit, vm: ActivityTypeEditViewModel = hi
             SectionTitle(stringResource(R.string.tracker_type_color))
             ColorPicker(selected = state.type.color, onSelect = { c -> vm.update { it.copy(color = c) } })
             SectionTitle(stringResource(R.string.tracker_type_icon))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                ActivityIcons.all.forEach { (key, icon) ->
-                    val selected = key == state.type.icon
-                    Box(
-                        Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(if (selected) color else MaterialTheme.colorScheme.surfaceContainerHigh)
-                            .then(if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier)
-                            .clickable { vm.update { it.copy(icon = key) } },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(icon, key, tint = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
+            MeoIconPicker(
+                selected = state.type.icon,
+                tint = color,
+                onSelect = { key -> vm.update { it.copy(icon = key) } },
+            )
             SectionTitle(stringResource(R.string.tracker_goals))
             Text(
                 stringResource(R.string.tracker_goals_hint),

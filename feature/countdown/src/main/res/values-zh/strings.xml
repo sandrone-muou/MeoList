@@ -1,4 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="countdown_title">倒数日</string>
+    <string name="countdown_new">新建倒数日</string>
+    <string name="countdown_edit">编辑倒数日</string>
+    <string name="countdown_name">标题</string>
+    <string name="countdown_name_hint">如：妈妈的生日</string>
+    <string name="countdown_date">日期</string>
+    <string name="countdown_mode">方式</string>
+    <string name="countdown_mode_down">倒数</string>
+    <string name="countdown_mode_up">正数</string>
+    <string name="countdown_yearly">每年</string>
+    <string name="countdown_yearly_title">每年重复</string>
+    <string name="countdown_yearly_hint">自动指向下一个周年，而不是最初的日期。</string>
+    <string name="countdown_pin_title">置顶</string>
+    <string name="countdown_pin_hint">让它显示在其他倒数日之前。</string>
+    <string name="countdown_color">颜色</string>
+    <string name="countdown_note">备注</string>
+    <string name="countdown_note_hint">记点什么</string>
+    <string name="countdown_years_since">%1$d 年</string>
+    <string name="countdown_today">今天</string>
+    <string name="countdown_today_label">就是今天</string>
+    <string name="countdown_days_left">天后</string>
+    <string name="countdown_days_ago">天前</string>
+    <string name="countdown_days_label">天</string>
+    <string name="countdown_pin">置顶</string>
+    <string name="countdown_unpin">取消置顶</string>
+    <string name="countdown_archive">归档</string>
+    <string name="countdown_unarchive">恢复</string>
+    <string name="countdown_archived_count">已归档的倒数日（%1$d）</string>
+    <string name="countdown_archived_title">已归档的倒数日</string>
+    <string name="countdown_delete_title">删除“%1$s”？</string>
+    <string name="countdown_delete_text">这个倒数日和备注都会被删除。</string>
+    <string name="countdown_empty_title">还没有倒数日</string>
+    <string name="countdown_empty_text">添加生日、旅行或截止日期，随时看看还有多少天。</string>
+    <string name="countdown_preview_left">还有 %1$d 天</string>
+    <string name="countdown_preview_today">就是今天</string>
+    <string name="countdown_preview_past">已经过去 %1$d 天</string>
+    <string name="countdown_preview_since">已经 %1$d 天</string>
 </resources>

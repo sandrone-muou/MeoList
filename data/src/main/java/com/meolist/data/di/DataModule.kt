@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import com.meolist.data.db.MeoDatabase
 import com.meolist.data.db.dao.ActivityTypeDao
+import com.meolist.data.db.dao.CountdownDao
+import com.meolist.data.db.dao.HabitDao
 import com.meolist.data.db.dao.ReminderDao
 import com.meolist.data.db.dao.TagDao
 import com.meolist.data.db.dao.TaskDao
@@ -11,6 +13,8 @@ import com.meolist.data.db.dao.TaskListDao
 import com.meolist.data.db.dao.TimeRecordDao
 import com.meolist.data.prefs.DataStoreAppPreferences
 import com.meolist.data.repo.ActivityTypeRepositoryImpl
+import com.meolist.data.repo.CountdownRepositoryImpl
+import com.meolist.data.repo.HabitRepositoryImpl
 import com.meolist.data.repo.ReminderRepositoryImpl
 import com.meolist.data.repo.RoomTransactionRunner
 import com.meolist.data.repo.TimeRecordRepositoryImpl
@@ -22,6 +26,8 @@ import com.meolist.domain.common.ApplicationScope
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.SystemClock
 import com.meolist.domain.common.TransactionRunner
+import com.meolist.domain.countdown.CountdownRepository
+import com.meolist.domain.habit.HabitRepository
 import com.meolist.domain.reminder.ReminderRepository
 import com.meolist.domain.task.TagRepository
 import com.meolist.domain.task.TaskCompletionHook
@@ -58,6 +64,8 @@ object DatabaseModule {
     @Provides fun reminderDao(db: MeoDatabase): ReminderDao = db.reminderDao()
     @Provides fun activityTypeDao(db: MeoDatabase): ActivityTypeDao = db.activityTypeDao()
     @Provides fun timeRecordDao(db: MeoDatabase): TimeRecordDao = db.timeRecordDao()
+    @Provides fun habitDao(db: MeoDatabase): HabitDao = db.habitDao()
+    @Provides fun countdownDao(db: MeoDatabase): CountdownDao = db.countdownDao()
 
     @Provides
     @Singleton
@@ -81,4 +89,6 @@ abstract class RepositoryModule {
     @Binds abstract fun timeRecordRepository(impl: TimeRecordRepositoryImpl): TimeRecordRepository
     @Binds abstract fun transactionRunner(impl: RoomTransactionRunner): TransactionRunner
     @Binds abstract fun taskCompletionHook(impl: StopTimersOnCompletion): TaskCompletionHook
+    @Binds abstract fun habitRepository(impl: HabitRepositoryImpl): HabitRepository
+    @Binds abstract fun countdownRepository(impl: CountdownRepositoryImpl): CountdownRepository
 }

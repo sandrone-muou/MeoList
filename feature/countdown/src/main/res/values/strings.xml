@@ -1,4 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="countdown_title">Countdowns</string>
+    <string name="countdown_new">New countdown</string>
+    <string name="countdown_edit">Edit countdown</string>
+    <string name="countdown_name">Title</string>
+    <string name="countdown_name_hint">e.g. Birthday</string>
+    <string name="countdown_date">Date</string>
+    <string name="countdown_mode">Mode</string>
+    <string name="countdown_mode_down">Count down</string>
+    <string name="countdown_mode_up">Count up</string>
+    <string name="countdown_yearly">Yearly</string>
+    <string name="countdown_yearly_title">Repeat every year</string>
+    <string name="countdown_yearly_hint">Count to the next anniversary instead of the original date.</string>
+    <string name="countdown_pin_title">Pin to top</string>
+    <string name="countdown_pin_hint">Keep it above the other countdowns.</string>
+    <string name="countdown_color">Color</string>
+    <string name="countdown_note">Note</string>
+    <string name="countdown_note_hint">Anything to remember</string>
+    <string name="countdown_years_since">%1$d years</string>
+    <string name="countdown_today">Today</string>
+    <string name="countdown_today_label">today</string>
+    <string name="countdown_days_left">days left</string>
+    <string name="countdown_days_ago">days ago</string>
+    <string name="countdown_days_label">days</string>
+    <string name="countdown_pin">Pin to top</string>
+    <string name="countdown_unpin">Unpin</string>
+    <string name="countdown_archive">Archive</string>
+    <string name="countdown_unarchive">Restore</string>
+    <string name="countdown_archived_count">Archived countdowns (%1$d)</string>
+    <string name="countdown_archived_title">Archived countdowns</string>
+    <string name="countdown_delete_title">Delete “%1$s”?</string>
+    <string name="countdown_delete_text">This countdown and its note are removed.</string>
+    <string name="countdown_empty_title">No countdowns yet</string>
+    <string name="countdown_empty_text">Add birthdays, trips or deadlines to see how many days are left.</string>
+    <string name="countdown_preview_left">In %1$d days</string>
+    <string name="countdown_preview_today">Today</string>
+    <string name="countdown_preview_past">%1$d days ago</string>
+    <string name="countdown_preview_since">%1$d days since</string>
 </resources>

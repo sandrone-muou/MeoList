@@ -2,6 +2,8 @@ package com.meolist.core.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Brush
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.DirectionsWalk
@@ -18,6 +20,8 @@ import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.School
 import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.ShoppingCart
+import androidx.compose.material.icons.outlined.WaterDrop
+import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Edit
@@ -30,6 +34,7 @@ object ActivityIcons {
     const val DEFAULT = "timer"
 
     val all: List<Pair<String, ImageVector>> = listOf(
+        "check" to Icons.Outlined.CheckCircle,
         "timer" to Icons.Outlined.Timer,
         "work" to Icons.Outlined.Work,
         "code" to Icons.Outlined.Code,
@@ -43,6 +48,9 @@ object ActivityIcons {
         "run" to Icons.Outlined.DirectionsRun,
         "walk" to Icons.Outlined.DirectionsWalk,
         "meditate" to Icons.Outlined.SelfImprovement,
+        "water" to Icons.Outlined.WaterDrop,
+        "sun" to Icons.Outlined.WbSunny,
+        "clean" to Icons.Outlined.CleaningServices,
         "sleep" to Icons.Outlined.Bedtime,
         "meal" to Icons.Outlined.Restaurant,
         "coffee" to Icons.Outlined.LocalCafe,
