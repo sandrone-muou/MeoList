@@ -1,4 +1,27 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="stats_title">Statistics</string>
+    <string name="stats_period_day">Day</string>
+    <string name="stats_period_week">Week</string>
+    <string name="stats_period_month">Month</string>
+    <string name="stats_period_year">Year</string>
+    <string name="stats_previous">Previous period</string>
+    <string name="stats_next">Next period</string>
+    <string name="stats_back_to_now">Back to current</string>
+    <string name="stats_total">Total</string>
+    <string name="stats_daily_average">Daily average</string>
+    <string name="stats_active_days">Active days</string>
+    <string name="stats_tasks_done">Tasks done</string>
+    <string name="stats_previous_day">vs yesterday</string>
+    <string name="stats_previous_week">vs last week</string>
+    <string name="stats_previous_month">vs last month</string>
+    <string name="stats_previous_year">vs last year</string>
+    <string name="stats_by_activity">By activity</string>
+    <string name="stats_by_hour">By hour</string>
+    <string name="stats_by_day">By day</string>
+    <string name="stats_by_month">By month</string>
+    <string name="stats_empty">Nothing tracked yet</string>
+    <string name="stats_empty_hint">Start a timer or add a record to see your time here.</string>
+    <string name="stats_unknown_activity">Deleted activity</string>
+    <string name="stats_pie_desc">Time per activity</string>
+    <string name="stats_bar_desc">Tracked time chart</string>
 </resources>

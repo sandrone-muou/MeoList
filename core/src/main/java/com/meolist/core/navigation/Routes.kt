@@ -26,9 +26,16 @@ object Routes {
     const val ACTIVITY_TYPE_EDIT = "tracker/type/{$ARG_ID}"
     fun activityTypeEdit(typeId: Long = 0) = "tracker/type/$typeId"
     const val RECORDS = "tracker/records"
-    const val RECORD_EDIT = "tracker/record/{$ARG_ID}?$ARG_EXTRA={$ARG_EXTRA}"
-    /** [recordId] 0 creates a new record, optionally pre-selecting [typeId]. */
-    fun recordEdit(recordId: Long = 0, typeId: Long = 0) = "tracker/record/$recordId?$ARG_EXTRA=$typeId"
+    const val ARG_DAY = "day"
+    /** Sentinel for "no day given" in [recordEdit]. */
+    const val NO_DAY = Long.MIN_VALUE
+    const val RECORD_EDIT = "tracker/record/{$ARG_ID}?$ARG_EXTRA={$ARG_EXTRA}&$ARG_DAY={$ARG_DAY}"
+    /**
+     * [recordId] 0 creates a new record, optionally pre-selecting [typeId] and placing it on [epochDay]
+     * (otherwise it ends now).
+     */
+    fun recordEdit(recordId: Long = 0, typeId: Long = 0, epochDay: Long = NO_DAY) =
+        "tracker/record/$recordId?$ARG_EXTRA=$typeId&$ARG_DAY=$epochDay"
 
     // Habits
     const val HABIT_DETAIL = "habit/{$ARG_ID}"

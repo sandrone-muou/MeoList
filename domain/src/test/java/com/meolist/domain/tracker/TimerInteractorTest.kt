@@ -17,6 +17,7 @@ import com.meolist.domain.testing.FakeTimerNotifier
 import com.meolist.domain.testing.FakeTracker
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -255,7 +256,7 @@ class TimerInteractorTest {
     @Test
     fun deleteAndRestoreRecord_roundTrips() = runTest {
         val work = type("Work")
-        val id = timers.addRecord(TimeRecord(typeId = work, startAt = at(8, 0), endAt = at(9, 0), comment = " x "))
+        val id = saved(timers.saveRecord(TimeRecord(typeId = work, startAt = at(8, 0), endAt = at(9, 0), comment = " x ")))
         val record = tracker.getRecord(id)!!
         assertTrue(record.isManual)
         assertEquals("x", record.comment)
@@ -265,6 +266,43 @@ class TimerInteractorTest {
         timers.restoreRecord(deleted)
         assertEquals(listOf(60 * minute), tracker.records.value.values.map { it.durationMs })
     }
+
+    @Test
+    fun saveRecord_rejectsInvalidRecordsWithoutWriting() = runTest {
+        val work = type("Work")
+        fun record(start: Long, end: Long, typeId: Long = work) = TimeRecord(typeId = typeId, startAt = start, endAt = end)
+
+        assertEquals(RecordSaveResult.Invalid(RecordProblem.NOT_POSITIVE), timers.saveRecord(record(at(9, 0), at(9, 0))))
+        assertEquals(RecordSaveResult.Invalid(RecordProblem.NOT_POSITIVE), timers.saveRecord(record(at(9, 0), at(8, 0))))
+        assertEquals(RecordSaveResult.Invalid(RecordProblem.IN_FUTURE), timers.saveRecord(record(at(9, 0), at(10, 5))))
+        assertEquals(RecordSaveResult.Invalid(RecordProblem.NO_TYPE), timers.saveRecord(record(at(9, 0), at(9, 30), typeId = 999)))
+        assertTrue(tracker.records.value.isEmpty())
+        // Ending in the current minute is fine.
+        clock.advance(30_000)
+        assertTrue(timers.saveRecord(record(at(9, 0), at(10, 1))) is RecordSaveResult.Saved)
+    }
+
+    @Test
+    fun saveRecord_editKeepsOriginAndDropsMissingTask() = runTest {
+        val work = type("Work")
+        val study = type("Study")
+        val id = timers.start(work)
+        clock.advance(30 * minute)
+        val recordId = timers.stop(id)!!
+        assertFalse(tracker.getRecord(recordId)!!.isManual)
+
+        val edited = tracker.getRecord(recordId)!!.copy(typeId = study, startAt = at(9, 0), taskId = 12345, isManual = true)
+        assertEquals(RecordSaveResult.Saved(recordId), timers.saveRecord(edited))
+
+        val record = tracker.getRecord(recordId)!!
+        assertEquals(study, record.typeId)
+        assertEquals(90 * minute, record.durationMs)
+        assertFalse(record.isManual)
+        assertNull(record.taskId)
+        assertEquals(1, tracker.records.value.size)
+    }
+
+    private fun saved(result: RecordSaveResult): Long = (result as RecordSaveResult.Saved).id
 
     @Test
     fun defaults_matchDocumentedSettings() {

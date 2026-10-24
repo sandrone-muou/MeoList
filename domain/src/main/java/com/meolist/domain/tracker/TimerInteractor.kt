@@ -78,18 +78,24 @@ class TimerInteractor @Inject constructor(
         sync.sync()
     }
 
-    /** Adds a record entered by hand. */
-    suspend fun addRecord(record: TimeRecord): Long {
-        require(record.endAt > record.startAt) { "record must have a positive duration" }
-        val id = records.insertRecord(record.copy(id = 0, comment = record.comment.trim(), isManual = true))
+    /**
+     * Adds a record entered by hand ([TimeRecord.id] 0) or updates an existing one. A new record is
+     * marked manual; an edited one keeps how it was created. Nothing is written when the record is
+     * invalid.
+     */
+    suspend fun saveRecord(record: TimeRecord): RecordSaveResult {
+        val type = types.getType(record.typeId)
+        RecordRules.validate(record, typeExists = type != null, now = clock.now())?.let { return RecordSaveResult.Invalid(it) }
+        val clean = record.copy(comment = record.comment.trim(), taskId = record.taskId?.takeIf { tasks.get(it) != null })
+        val existing = if (clean.id != 0L) records.getRecord(clean.id) else null
+        val id = if (existing == null) {
+            records.insertRecord(clean.copy(id = 0, isManual = true))
+        } else {
+            records.updateRecord(clean.copy(isManual = existing.isManual))
+            existing.id
+        }
         sync.sync()
-        return id
-    }
-
-    suspend fun updateRecord(record: TimeRecord) {
-        require(record.endAt > record.startAt) { "record must have a positive duration" }
-        records.updateRecord(record.copy(comment = record.comment.trim()))
-        sync.sync()
+        return RecordSaveResult.Saved(id)
     }
 
     /** Deletes a record and returns it, so the deletion can be undone with [restoreRecord]. */
