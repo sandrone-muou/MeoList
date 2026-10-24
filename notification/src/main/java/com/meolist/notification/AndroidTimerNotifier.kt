@@ -8,6 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.meolist.core.locale.localized
 import com.meolist.domain.tracker.ActivityGoal
 import com.meolist.domain.tracker.ActivityType
 import com.meolist.domain.tracker.GoalPeriod
@@ -30,6 +31,7 @@ class AndroidTimerNotifier @Inject constructor(
 
     @SuppressLint("MissingPermission") // Checked through areNotificationsEnabled().
     override fun showRunning(timers: List<RunningTimerView>) {
+        val context = context.localized()
         val ids = timers.map { notificationId(it.timer.id) }.toSet()
         // Removing the summary first: cancelling a summary can take its children along.
         if (timers.size < 2) manager.cancel(TAG_SUMMARY, SUMMARY_ID)
@@ -38,8 +40,8 @@ class AndroidTimerNotifier @Inject constructor(
             .forEach { manager.cancel(TAG_TIMER, it.id) }
         if (!manager.areNotificationsEnabled()) return
         try {
-            timers.forEach { manager.notify(TAG_TIMER, notificationId(it.timer.id), timerNotification(it)) }
-            if (timers.size >= 2) manager.notify(TAG_SUMMARY, SUMMARY_ID, summary(timers))
+            timers.forEach { manager.notify(TAG_TIMER, notificationId(it.timer.id), timerNotification(context, it)) }
+            if (timers.size >= 2) manager.notify(TAG_SUMMARY, SUMMARY_ID, summary(context, timers))
         } catch (_: SecurityException) {
             // Notification permission was revoked.
         }
@@ -48,6 +50,7 @@ class AndroidTimerNotifier @Inject constructor(
     @SuppressLint("MissingPermission")
     override fun showGoalReached(type: ActivityType, goal: ActivityGoal) {
         if (!manager.areNotificationsEnabled()) return
+        val context = context.localized()
         val textRes = when (goal.period) {
             GoalPeriod.DAY -> R.string.notif_goal_day
             GoalPeriod.WEEK -> R.string.notif_goal_week
@@ -57,7 +60,7 @@ class AndroidTimerNotifier @Inject constructor(
             .setSmallIcon(R.drawable.ic_goal)
             .setColor(type.color)
             .setContentTitle(context.getString(R.string.notif_goal_title, type.name))
-            .setContentText(context.getString(textRes, durationText(goal.targetSec)))
+            .setContentText(context.getString(textRes, durationText(context, goal.targetSec)))
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setAutoCancel(true)
             .setContentIntent(DeepLinks.openIntent(context, DeepLinks.trackerUri))
@@ -68,7 +71,7 @@ class AndroidTimerNotifier @Inject constructor(
         }
     }
 
-    private fun timerNotification(view: RunningTimerView) =
+    private fun timerNotification(context: Context, view: RunningTimerView) =
         NotificationCompat.Builder(context, NotificationChannels.TIMERS)
             .setSmallIcon(R.drawable.ic_timer)
             .setColor(view.type.color)
@@ -91,7 +94,7 @@ class AndroidTimerNotifier @Inject constructor(
             .addAction(0, context.getString(R.string.notif_action_stop), stopIntent(view.timer.id))
             .build()
 
-    private fun summary(timers: List<RunningTimerView>) =
+    private fun summary(context: Context, timers: List<RunningTimerView>) =
         NotificationCompat.Builder(context, NotificationChannels.TIMERS)
             .setSmallIcon(R.drawable.ic_timer)
             .setContentTitle(context.getString(R.string.notif_timers_summary, timers.size))
@@ -115,7 +118,7 @@ class AndroidTimerNotifier @Inject constructor(
         return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
-    private fun durationText(seconds: Long): String {
+    private fun durationText(context: Context, seconds: Long): String {
         val h = (seconds / 3600).toInt()
         val m = ((seconds % 3600) / 60).toInt()
         return when {

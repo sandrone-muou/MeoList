@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.meolist.core.locale.localized
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.toLocalDateTime
 import com.meolist.domain.common.today
@@ -28,7 +29,8 @@ class AndroidReminderNotifier @Inject constructor(
     @SuppressLint("MissingPermission") // Checked through areNotificationsEnabled().
     override fun showTaskReminder(task: Task, reminderId: Long) {
         if (!manager.areNotificationsEnabled()) return
-        val due = task.dueAt?.let { dueText(it, task.allDay) }
+        val context = context.localized()
+        val due = task.dueAt?.let { dueText(context, it, task.allDay) }
         val builder = NotificationCompat.Builder(context, NotificationChannels.REMINDERS)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(task.title)
@@ -53,7 +55,7 @@ class AndroidReminderNotifier @Inject constructor(
         manager.cancel(TAG_TASK, notificationId(taskId))
     }
 
-    private fun dueText(dueAt: Long, allDay: Boolean): String {
+    private fun dueText(context: Context, dueAt: Long, allDay: Boolean): String {
         val zone = clock.zone()
         val dateTime = dueAt.toLocalDateTime(zone)
         val date = dateTime.toLocalDate()
@@ -61,7 +63,10 @@ class AndroidReminderNotifier @Inject constructor(
         val dateText = when (date) {
             today -> context.getString(R.string.notif_today)
             today.plusDays(1) -> context.getString(R.string.notif_tomorrow)
-            else -> date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+            else -> {
+                val locale = context.resources.configuration.locales[0]
+                date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))
+            }
         }
         return if (allDay) dateText else "$dateText ${dateTime.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"))}"
     }

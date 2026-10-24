@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PriorityHigh
@@ -74,6 +75,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.meolist.core.locale.AppLanguage
+import com.meolist.core.locale.LanguageStore
+import com.meolist.core.locale.findActivity
 import com.meolist.core.ui.ConfirmDialog
 import com.meolist.core.ui.ReminderPermissionBanner
 import com.meolist.core.ui.currentLocale
@@ -95,8 +99,10 @@ fun SettingsRoute(
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     val permissions = rememberReminderPermissionState()
+    val language = LanguageStore.current(context)
     var pendingRestore by remember { mutableStateOf<Uri?>(null) }
 
+    var choosingLanguage by remember { mutableStateOf(false) }
     var choosingIgnore by remember { mutableStateOf(false) }
     var choosingUrgent by remember { mutableStateOf(false) }
     var choosingWeekStart by remember { mutableStateOf(false) }
@@ -164,6 +170,19 @@ fun SettingsRoute(
                 item {
                     LinearProgressIndicator(
                         modifier = Modifier.fillMaxWidth().clip(CircleShape),
+                    )
+                }
+            }
+
+            item { SectionLabel(stringResource(R.string.settings_section_appearance)) }
+            item {
+                SettingsCard {
+                    ChoiceRow(
+                        icon = Icons.Outlined.Language,
+                        title = stringResource(R.string.settings_language),
+                        subtitle = stringResource(R.string.settings_language_desc),
+                        value = languageLabel(language),
+                        onClick = { choosingLanguage = true },
                     )
                 }
             }
@@ -276,6 +295,24 @@ fun SettingsRoute(
         }
     }
 
+    if (choosingLanguage) {
+        ChoiceDialog(
+            title = stringResource(R.string.settings_language),
+            options = listOf(
+                AppLanguage.ZH to stringResource(R.string.settings_language_zh),
+                AppLanguage.EN to stringResource(R.string.settings_language_en),
+            ),
+            selected = language,
+            onSelect = { chosen ->
+                choosingLanguage = false
+                if (chosen != language) {
+                    LanguageStore.save(context, chosen)
+                    context.findActivity()?.recreate()
+                }
+            },
+            onDismiss = { choosingLanguage = false },
+        )
+    }
     if (choosingIgnore) {
         ChoiceDialog(
             title = stringResource(R.string.settings_ignore_short),
@@ -330,6 +367,11 @@ fun SettingsRoute(
         )
     }
 }
+
+@Composable
+private fun languageLabel(language: AppLanguage): String = stringResource(
+    if (language == AppLanguage.ZH) R.string.settings_language_zh else R.string.settings_language_en,
+)
 
 @Composable
 private fun SectionLabel(text: String) {

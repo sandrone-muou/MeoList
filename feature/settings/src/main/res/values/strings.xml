@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_title">Settings</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_desc">Language used for the app interface.</string>
+    <string name="settings_language_zh">中文</string>
+    <string name="settings_language_en">English</string>
     <string name="settings_section_timing">Timing</string>
     <string name="settings_multiple_timers">Allow parallel timers</string>
     <string name="settings_multiple_timers_desc">Run several activities at the same time.</string>

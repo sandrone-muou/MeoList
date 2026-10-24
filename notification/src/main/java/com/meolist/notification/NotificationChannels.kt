@@ -3,6 +3,7 @@ package com.meolist.notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import com.meolist.core.locale.localized
 
 /** Notification channels. Called on every app start so names follow the current language. */
 object NotificationChannels {
@@ -11,6 +12,7 @@ object NotificationChannels {
     const val GOALS = "goals"
 
     fun create(context: Context) {
+        val context = context.localized()
         val manager = context.getSystemService(NotificationManager::class.java)
         val reminders = NotificationChannel(
             REMINDERS,
