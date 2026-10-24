@@ -154,4 +154,14 @@
     <string name="tasks_timer_no_types">还没有活动，先新建一个再为任务计时。</string>
     <string name="tasks_timer_list_default">设为该清单的默认活动</string>
     <string name="tasks_timer_new_type">新建活动</string>
+    <string name="quadrant_title">四象限</string>
+    <string name="quadrant_hint">重要性由优先级决定；紧急指 %1$s 内到期。拖动任务只改变优先级，具体落在哪一行由到期日决定。</string>
+    <string name="quadrant_do">马上做</string>
+    <string name="quadrant_schedule">计划做</string>
+    <string name="quadrant_delegate">授权做</string>
+    <string name="quadrant_later">有空再做</string>
+    <string name="quadrant_empty">暂无任务</string>
+    <plurals name="quadrant_urgent_window">
+        <item quantity="other">%1$d 天</item>
+    </plurals>
 </resources>

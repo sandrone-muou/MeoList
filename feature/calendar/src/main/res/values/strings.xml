@@ -1,4 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="calendar_title">Calendar</string>
+    <string name="calendar_month">Month</string>
+    <string name="calendar_week">Week</string>
+    <string name="calendar_today">Today</string>
+    <string name="calendar_previous">Previous</string>
+    <string name="calendar_next">Next</string>
+    <string name="calendar_legend_task">Tasks</string>
+    <string name="calendar_legend_habit">Habits</string>
+    <string name="calendar_legend_countdown">Dates</string>
+    <string name="calendar_legend_time">Time</string>
+    <string name="calendar_tracked">Tracked %1$s</string>
+    <string name="calendar_nothing">Nothing scheduled</string>
+    <string name="calendar_tasks">Tasks</string>
+    <string name="calendar_habits">Habits</string>
+    <string name="calendar_countdowns">Dates</string>
+    <string name="calendar_time">Time</string>
+    <string name="calendar_check">Check in</string>
+    <string name="calendar_yearly">Yearly</string>
+    <string name="calendar_unknown_activity">Activity</string>
+    <string name="calendar_undo_check">Undo check-in</string>
 </resources>

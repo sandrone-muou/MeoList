@@ -1,4 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="calendar_title">日历</string>
+    <string name="calendar_month">月</string>
+    <string name="calendar_week">周</string>
+    <string name="calendar_today">今天</string>
+    <string name="calendar_previous">上一页</string>
+    <string name="calendar_next">下一页</string>
+    <string name="calendar_legend_task">任务</string>
+    <string name="calendar_legend_habit">习惯</string>
+    <string name="calendar_legend_countdown">纪念日</string>
+    <string name="calendar_legend_time">计时</string>
+    <string name="calendar_tracked">已计时 %1$s</string>
+    <string name="calendar_nothing">这一天没有安排</string>
+    <string name="calendar_tasks">任务</string>
+    <string name="calendar_habits">习惯</string>
+    <string name="calendar_countdowns">纪念日</string>
+    <string name="calendar_time">计时</string>
+    <string name="calendar_check">打卡</string>
+    <string name="calendar_yearly">每年</string>
+    <string name="calendar_unknown_activity">活动</string>
+    <string name="calendar_undo_check">取消打卡</string>
 </resources>

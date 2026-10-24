@@ -158,4 +158,15 @@
     <string name="tasks_timer_no_types">No activities yet. Create one to start timing this task.</string>
     <string name="tasks_timer_list_default">Use for this list by default</string>
     <string name="tasks_timer_new_type">New activity</string>
+    <string name="quadrant_title">Four quadrants</string>
+    <string name="quadrant_hint">Important comes from the priority; urgent means due within %1$s. Drag a task to change its priority; the due date picks the row.</string>
+    <string name="quadrant_do">Do now</string>
+    <string name="quadrant_schedule">Schedule</string>
+    <string name="quadrant_delegate">Delegate</string>
+    <string name="quadrant_later">Later</string>
+    <string name="quadrant_empty">Nothing here</string>
+    <plurals name="quadrant_urgent_window">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
 </resources>

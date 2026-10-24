@@ -1,15 +1,14 @@
 package com.meolist.feature.tasks
 
-import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.meolist.core.navigation.Routes
-import com.meolist.core.ui.PlaceholderScreen
 import com.meolist.feature.tasks.detail.TaskDetailRoute
 import com.meolist.feature.tasks.manage.ListManageRoute
+import com.meolist.feature.tasks.quadrant.QuadrantRoute
 import com.meolist.feature.tasks.search.SearchRoute
 
 fun NavGraphBuilder.tasksGraph(navController: NavController) {
@@ -40,6 +39,9 @@ fun NavGraphBuilder.tasksGraph(navController: NavController) {
         ListManageRoute(onBack = { navController.popBackStack() })
     }
     composable(Routes.QUADRANT) {
-        PlaceholderScreen(stringResource(R.string.tasks_quadrant_title), onBack = { navController.popBackStack() })
+        QuadrantRoute(
+            onBack = { navController.popBackStack() },
+            onOpenTask = { navController.navigate(Routes.taskDetail(it)) },
+        )
     }
 }
