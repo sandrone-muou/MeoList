@@ -21,6 +21,9 @@ captures/
 *.keystore
 keystore.properties
 
+# Design explorations
+/design/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -20,4 +20,19 @@
     <string name="calendar_yearly">Yearly</string>
     <string name="calendar_unknown_activity">Activity</string>
     <string name="calendar_undo_check">Undo check-in</string>
+    <string name="calendar_habit_daily">Daily</string>
+    <string name="calendar_habit_weekly">%1$d× per week</string>
+    <string name="calendar_countdown_today">Today</string>
+    <plurals name="calendar_days_away">
+        <item quantity="one">%d day to go</item>
+        <item quantity="other">%d days to go</item>
+    </plurals>
+    <plurals name="calendar_days_ago">
+        <item quantity="one">%d day ago</item>
+        <item quantity="other">%d days ago</item>
+    </plurals>
+    <plurals name="calendar_days_since">
+        <item quantity="one">%d day since</item>
+        <item quantity="other">%d days since</item>
+    </plurals>
 </resources>

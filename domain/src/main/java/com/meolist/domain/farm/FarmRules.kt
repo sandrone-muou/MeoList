@@ -86,6 +86,21 @@ object FarmRules {
     fun achievementProgress(achievement: Achievement, metrics: FarmMetrics): Int =
         metrics.of(achievement.metric).coerceAtMost(achievement.target)
 
+    /**
+     * How far the player is from unlocking [crop], 0..1, or null when it is always available.
+     * Used to show a progress ring on locked crops in the planting sheet.
+     */
+    fun cropUnlockProgress(crop: Crop, metrics: FarmMetrics): Float? = when (val unlock = crop.unlock) {
+        CropUnlock.Always -> null
+        is CropUnlock.Harvests -> (metrics.harvested.toFloat() / unlock.count).coerceIn(0f, 1f)
+        is CropUnlock.FocusMinutes -> (metrics.focusMinutes.toFloat() / unlock.minutes).coerceIn(0f, 1f)
+        is CropUnlock.StreakDays -> (metrics.bestStreak.toFloat() / unlock.days).coerceIn(0f, 1f)
+        CropUnlock.AllOtherCrops -> {
+            val others = Crop.entries.filter { it != crop }
+            (others.count { metrics.harvested(it) > 0 }.toFloat() / others.size).coerceIn(0f, 1f)
+        }
+    }
+
     fun achievementStates(metrics: FarmMetrics, unlockedAt: Map<String, Long>): List<AchievementState> =
         Achievement.entries.map { achievement ->
             val at = unlockedAt[achievement.key]

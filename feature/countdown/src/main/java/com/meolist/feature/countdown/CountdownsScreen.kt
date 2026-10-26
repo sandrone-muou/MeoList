@@ -1,5 +1,7 @@
 package com.meolist.feature.countdown
 
+import com.meolist.core.ui.components.EmptyState
+import com.meolist.core.ui.components.MeoScaffold
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -57,8 +59,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.meolist.core.ui.ConfirmDialog
+import com.meolist.core.ui.accentColor
 import com.meolist.core.ui.currentLocale
 import com.meolist.core.ui.longDate
+import com.meolist.core.ui.readableOn
 import com.meolist.domain.common.ApplicationScope
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.today
@@ -155,34 +159,28 @@ fun CountdownsRoute(
     var showArchived by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<Countdown?>(null) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.countdown_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(com.meolist.core.R.string.core_back))
-                    }
-                },
-                actions = {
-                    Box {
-                        IconButton(onClick = { menu = true }) {
-                            Icon(Icons.Outlined.MoreVert, stringResource(com.meolist.core.R.string.core_more_options))
-                        }
-                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.countdown_archived_count, state.archived.size)) },
-                                enabled = state.archived.isNotEmpty(),
-                                onClick = { menu = false; showArchived = true },
-                            )
-                        }
-                    }
-                },
-            )
+    MeoScaffold(
+        title = stringResource(R.string.countdown_title),
+        onBack = onBack,
+        actions = {
+            Box {
+                IconButton(onClick = { menu = true }) {
+                    Icon(Icons.Outlined.MoreVert, stringResource(com.meolist.core.R.string.core_more_options))
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.countdown_archived_count, state.archived.size)) },
+                        enabled = state.archived.isNotEmpty(),
+                        onClick = { menu = false; showArchived = true },
+                    )
+                }
+            }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAdd) {
-                Icon(Icons.Outlined.Add, stringResource(R.string.countdown_new))
+            if (state.items.isNotEmpty()) {
+                FloatingActionButton(onClick = onAdd) {
+                    Icon(Icons.Outlined.Add, stringResource(R.string.countdown_new))
+                }
             }
         },
     ) { padding ->
@@ -235,7 +233,7 @@ private fun CountdownCard(
     onDelete: () -> Unit,
 ) {
     val c = item.countdown
-    val color = Color(c.color)
+    val color = accentColor(c.color)
     val locale = currentLocale()
     var menu by remember { mutableStateOf(false) }
     Box {
@@ -247,7 +245,7 @@ private fun CountdownCard(
         ) {
             Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(40.dp).clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Outlined.HourglassBottom, null, tint = Color.White, modifier = Modifier.size(22.dp))
+                    Icon(Icons.Outlined.HourglassBottom, null, tint = color.readableOn(), modifier = Modifier.size(22.dp))
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
@@ -331,20 +329,13 @@ private fun CountdownCard(
 
 @Composable
 private fun EmptyCountdowns(onAdd: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(stringResource(R.string.countdown_empty_title), style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            stringResource(R.string.countdown_empty_text),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        EmptyState(
+            icon = Icons.Outlined.HourglassBottom,
+            title = stringResource(R.string.countdown_empty_title),
+            body = stringResource(R.string.countdown_empty_text),
+            primary = stringResource(R.string.countdown_new) to onAdd,
         )
-        Spacer(Modifier.height(24.dp))
-        Button(onClick = onAdd) { Text(stringResource(R.string.countdown_new)) }
     }
 }
 
@@ -361,7 +352,7 @@ private fun ArchivedCountdownsDialog(
             Column {
                 countdowns.forEach { c ->
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        Box(Modifier.size(10.dp).clip(CircleShape).background(Color(c.color)))
+                        Box(Modifier.size(10.dp).clip(CircleShape).background(accentColor(c.color)))
                         Spacer(Modifier.width(10.dp))
                         Text(c.title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         TextButton(onClick = { onRestore(c) }) { Text(stringResource(R.string.countdown_unarchive)) }

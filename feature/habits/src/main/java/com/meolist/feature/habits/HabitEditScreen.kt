@@ -19,22 +19,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,7 +54,11 @@ import com.meolist.core.ui.ColorPicker
 import com.meolist.core.ui.ConfirmDialog
 import com.meolist.core.ui.MeoIconPicker
 import com.meolist.core.ui.MeoPalette
+import com.meolist.core.ui.accentColor
+import com.meolist.core.ui.components.MeoScaffold
+import com.meolist.core.ui.components.rememberBackGuard
 import com.meolist.core.ui.currentLocale
+import com.meolist.core.ui.readableOn
 import com.meolist.domain.common.ApplicationScope
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.today
@@ -79,6 +79,8 @@ data class HabitEditState(
     val loaded: Boolean = false,
     val isNew: Boolean = true,
     val habit: Habit = Habit(name = ""),
+    /** Snapshot at load time; any difference means unsaved edits. */
+    val original: Habit? = null,
     val targetText: String = "1",
     val nameError: Boolean = false,
 )
@@ -99,17 +101,21 @@ class HabitEditViewModel @Inject constructor(
         viewModelScope.launch {
             val habit = if (habitId == 0L) null else habits.getHabit(habitId)
             _state.value = if (habit == null) {
+                val fresh = Habit(
+                    name = "",
+                    icon = "check",
+                    color = MeoPalette.colors[1],
+                    startDay = clock.today(),
+                )
+                HabitEditState(loaded = true, habit = fresh, original = fresh)
+            } else {
                 HabitEditState(
                     loaded = true,
-                    habit = Habit(
-                        name = "",
-                        icon = "check",
-                        color = MeoPalette.colors[1],
-                        startDay = clock.today(),
-                    ),
+                    isNew = false,
+                    habit = habit,
+                    original = habit,
+                    targetText = habit.dailyTarget.toString(),
                 )
-            } else {
-                HabitEditState(loaded = true, isNew = false, habit = habit, targetText = habit.dailyTarget.toString())
             }
         }
     }
@@ -178,46 +184,42 @@ fun HabitEditRoute(onBack: () -> Unit, vm: HabitEditViewModel = hiltViewModel())
     var confirmDelete by remember { mutableStateOf(false) }
     val locale = currentLocale()
     val habit = state.habit
-    val color = Color(habit.color)
+    val color = accentColor(habit.color)
     val kind = when (habit.schedule) {
         HabitSchedule.Daily -> ScheduleKind.DAILY
         is HabitSchedule.Weekdays -> ScheduleKind.DAYS
         is HabitSchedule.WeeklyTimes -> ScheduleKind.WEEKLY
     }
+    val original = state.original
+    val dirty = original != null &&
+        (habit != original || state.targetText != original.dailyTarget.toString())
+    val guard = rememberBackGuard(dirty = dirty, onBack = onBack)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(if (state.isNew) R.string.habits_new else R.string.habits_edit)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(com.meolist.core.R.string.core_back))
-                    }
-                },
-                actions = {
-                    if (!state.isNew) {
-                        IconButton(onClick = { confirmDelete = true }) {
-                            Icon(Icons.Outlined.DeleteOutline, stringResource(com.meolist.core.R.string.core_delete))
-                        }
-                    }
-                    IconButton(onClick = { vm.save(onBack) }, enabled = state.loaded) {
-                        Icon(Icons.Outlined.Check, stringResource(com.meolist.core.R.string.core_save))
-                    }
-                },
-            )
+    MeoScaffold(
+        title = stringResource(if (state.isNew) R.string.habits_new else R.string.habits_edit),
+        onBack = guard.request,
+        actions = {
+            if (!state.isNew) {
+                IconButton(onClick = { confirmDelete = true }) {
+                    Icon(Icons.Outlined.DeleteOutline, stringResource(com.meolist.core.R.string.core_delete))
+                }
+            }
+            IconButton(onClick = { vm.save(onBack) }, enabled = state.loaded) {
+                Icon(Icons.Outlined.Check, stringResource(com.meolist.core.R.string.core_save))
+            }
         },
     ) { padding ->
-        if (!state.loaded) return@Scaffold
+        if (!state.loaded) return@MeoScaffold
         Column(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = com.meolist.core.theme.Meo.spacing.screen),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(48.dp).clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
-                    Icon(ActivityIcons.of(habit.icon), null, tint = Color.White)
+                    Icon(ActivityIcons.of(habit.icon), null, tint = color.readableOn())
                 }
                 Spacer(Modifier.width(16.dp))
                 OutlinedTextField(
@@ -302,11 +304,6 @@ fun HabitEditRoute(onBack: () -> Unit, vm: HabitEditViewModel = hiltViewModel())
             ColorPicker(selected = habit.color, onSelect = { c -> vm.update { it.copy(color = c) } })
             SectionTitle(stringResource(R.string.habits_icon))
             MeoIconPicker(selected = habit.icon, tint = color, onSelect = { key -> vm.update { it.copy(icon = key) } })
-
-            Button(
-                onClick = { vm.save(onBack) },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-            ) { Text(stringResource(com.meolist.core.R.string.core_save)) }
         }
     }
 

@@ -7,8 +7,10 @@
     <string name="nav_farm">Farm</string>
     <string name="nav_more">More</string>
     <string name="more_title">More</string>
+    <string name="more_group_tools">Tools</string>
+    <string name="more_group_app">App</string>
     <string name="more_calendar">Calendar</string>
-    <string name="more_calendar_desc">Month view of tasks, habits and countdowns</string>
+    <string name="more_calendar_desc">Month view of your schedule</string>
     <string name="more_quadrant">Eisenhower matrix</string>
     <string name="more_quadrant_desc">Sort tasks by importance and urgency</string>
     <string name="more_countdown">Countdowns</string>

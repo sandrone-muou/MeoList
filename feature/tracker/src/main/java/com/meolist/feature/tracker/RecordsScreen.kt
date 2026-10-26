@@ -1,5 +1,7 @@
 package com.meolist.feature.tracker
 
+import com.meolist.core.ui.components.EmptyState
+import com.meolist.core.ui.components.MeoScaffold
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -20,6 +22,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.StackedBarChart
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -50,6 +53,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.meolist.core.ui.ActivityIcons
+import com.meolist.core.ui.accentColor
 import com.meolist.core.ui.MeoDatePickerDialog
 import com.meolist.core.ui.charts.DayTimeline
 import com.meolist.core.ui.charts.TimelineSpan
@@ -185,26 +189,20 @@ fun RecordsRoute(
     val deletedMessage = stringResource(R.string.tracker_record_deleted)
     val undoLabel = stringResource(com.meolist.core.R.string.core_undo)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.tracker_records_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(com.meolist.core.R.string.core_back))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onStats) {
-                        Icon(Icons.Outlined.StackedBarChart, stringResource(R.string.tracker_records_stats))
-                    }
-                },
-            )
+    MeoScaffold(
+        title = stringResource(R.string.tracker_records_title),
+        onBack = onBack,
+        actions = {
+            IconButton(onClick = onStats) {
+                Icon(Icons.Outlined.StackedBarChart, stringResource(R.string.tracker_records_stats))
+            }
         },
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { onAddRecord(state.day) }) {
-                Icon(Icons.Outlined.Add, stringResource(R.string.tracker_record_add))
+            if (state.rows.isNotEmpty() || state.running.isNotEmpty()) {
+                FloatingActionButton(onClick = { onAddRecord(state.day) }) {
+                    Icon(Icons.Outlined.Add, stringResource(R.string.tracker_record_add))
+                }
             }
         },
     ) { padding ->
@@ -240,7 +238,7 @@ fun RecordsRoute(
 
             val spans = buildList {
                 state.rows.forEach { row ->
-                    val color = row.type?.let { Color(it.color) } ?: Color.Gray
+                    val color = row.type?.let { accentColor(it.color) } ?: Color.Gray
                     add(
                         TimelineSpan(
                             startMinute = minuteOfDay(row.record.startAt, state.day, state.zone, start = true),
@@ -254,7 +252,7 @@ fun RecordsRoute(
                         TimelineSpan(
                             startMinute = minuteOfDay(row.timer.startedAt, state.day, state.zone, start = true),
                             endMinute = minuteOfDay(now, state.day, state.zone, start = false),
-                            color = (row.type?.let { Color(it.color) } ?: Color.Gray).copy(alpha = 0.55f),
+                            color = (row.type?.let { accentColor(it.color) } ?: Color.Gray).copy(alpha = 0.55f),
                         ),
                     )
                 }
@@ -270,10 +268,11 @@ fun RecordsRoute(
 
             if (state.rows.isEmpty() && state.running.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        stringResource(R.string.tracker_no_records),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
+                    EmptyState(
+                        icon = Icons.Outlined.Timer,
+                        title = stringResource(R.string.tracker_no_records),
+                        body = stringResource(R.string.tracker_no_records_body),
+                        primary = stringResource(R.string.tracker_record_add) to { onAddRecord(state.day) },
                     )
                 }
             } else {
@@ -329,7 +328,7 @@ private fun minuteOfDay(ms: Long, day: LocalDate, zone: ZoneId, start: Boolean):
 
 @Composable
 private fun RunningItem(row: RunningRow, now: Long) {
-    val color = row.type?.let { Color(it.color) } ?: MaterialTheme.colorScheme.outline
+    val color = row.type?.let { accentColor(it.color) } ?: MaterialTheme.colorScheme.outline
     val detail = listOfNotNull(row.taskTitle, row.timer.comment.takeIf { it.isNotBlank() }).joinToString(" · ")
     ListItem(
         leadingContent = {
@@ -357,7 +356,7 @@ private fun RunningItem(row: RunningRow, now: Long) {
 @Composable
 private fun RecordItem(row: RecordRow, day: LocalDate, zone: ZoneId, onClick: () -> Unit, onDelete: () -> Unit) {
     val record = row.record
-    val color = row.type?.let { Color(it.color) } ?: MaterialTheme.colorScheme.outline
+    val color = row.type?.let { accentColor(it.color) } ?: MaterialTheme.colorScheme.outline
     val start = record.startAt.toLocalDateTime(zone)
     val end = record.endAt.toLocalDateTime(zone)
     // Mark ends that fall on another day, e.g. a record running past midnight.

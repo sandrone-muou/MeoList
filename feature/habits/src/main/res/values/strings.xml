@@ -39,6 +39,11 @@
     <string name="habits_delete_title">Delete “%1$s”?</string>
     <string name="habits_delete_text">All check-ins are deleted too. Archive the habit to keep them.</string>
     <string name="habits_empty_title">No habits yet</string>
+    <string name="habits_week_title">This week</string>
+    <string name="habits_today_title">Today\'s progress</string>
+    <string name="habits_longest_streak">Best streak %1$d days</string>
+    <string name="habits_week_caption">Habits completed on each of the last 7 days</string>
+    <string name="habits_week_today">Checked in %1$d of %2$d today</string>
     <string name="habits_empty_text">Check off habits here; later they also feed your farm.</string>
     <string name="habits_add_suggested">Add reading, water and meditation</string>
     <string name="habits_suggest_read">Read 20 pages</string>

@@ -12,23 +12,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +45,8 @@ import com.meolist.core.ui.ColorPicker
 import com.meolist.core.ui.ConfirmDialog
 import com.meolist.core.ui.MeoDatePickerDialog
 import com.meolist.core.ui.MeoPalette
+import com.meolist.core.ui.components.MeoScaffold
+import com.meolist.core.ui.components.rememberBackGuard
 import com.meolist.core.ui.currentLocale
 import com.meolist.core.ui.longDate
 import com.meolist.domain.common.ApplicationScope
@@ -71,6 +69,8 @@ data class CountdownEditState(
     val loaded: Boolean = false,
     val isNew: Boolean = true,
     val countdown: Countdown = Countdown(title = "", baseDay = LocalDate.now()),
+    /** Snapshot at load time; any difference means unsaved edits. */
+    val original: Countdown? = null,
     val titleError: Boolean = false,
 )
 
@@ -89,20 +89,18 @@ class CountdownEditViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             _state.value = if (id == 0L) {
-                CountdownEditState(
-                    loaded = true,
-                    countdown = Countdown(
-                        title = "",
-                        baseDay = clock.today().plusDays(30),
-                        color = MeoPalette.colors[2],
-                    ),
+                val fresh = Countdown(
+                    title = "",
+                    baseDay = clock.today().plusDays(30),
+                    color = MeoPalette.colors[2],
                 )
+                CountdownEditState(loaded = true, countdown = fresh, original = fresh)
             } else {
                 val existing = countdowns.get(id)
                 if (existing == null) {
                     CountdownEditState(loaded = true, isNew = false)
                 } else {
-                    CountdownEditState(loaded = true, isNew = false, countdown = existing)
+                    CountdownEditState(loaded = true, isNew = false, countdown = existing, original = existing)
                 }
             }
         }
@@ -150,35 +148,30 @@ fun CountdownEditRoute(onBack: () -> Unit, vm: CountdownEditViewModel = hiltView
         else -> stringResource(R.string.countdown_preview_since, CountdownMath.daysSince(c, today))
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(if (state.isNew) R.string.countdown_new else R.string.countdown_edit)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(com.meolist.core.R.string.core_back))
-                    }
-                },
-                actions = {
-                    if (!state.isNew) {
-                        IconButton(onClick = { confirmDelete = true }) {
-                            Icon(Icons.Outlined.DeleteOutline, stringResource(com.meolist.core.R.string.core_delete))
-                        }
-                    }
-                    IconButton(onClick = { vm.save(onBack) }, enabled = state.loaded) {
-                        Icon(Icons.Outlined.Check, stringResource(com.meolist.core.R.string.core_save))
-                    }
-                },
-            )
+    val dirty = state.original != null && c != state.original
+    val guard = rememberBackGuard(dirty = dirty, onBack = onBack)
+
+    MeoScaffold(
+        title = stringResource(if (state.isNew) R.string.countdown_new else R.string.countdown_edit),
+        onBack = guard.request,
+        actions = {
+            if (!state.isNew) {
+                IconButton(onClick = { confirmDelete = true }) {
+                    Icon(Icons.Outlined.DeleteOutline, stringResource(com.meolist.core.R.string.core_delete))
+                }
+            }
+            IconButton(onClick = { vm.save(onBack) }, enabled = state.loaded) {
+                Icon(Icons.Outlined.Check, stringResource(com.meolist.core.R.string.core_save))
+            }
         },
     ) { padding ->
-        if (!state.loaded) return@Scaffold
+        if (!state.loaded) return@MeoScaffold
         Column(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = com.meolist.core.theme.Meo.spacing.screen),
         ) {
             OutlinedTextField(
                 value = c.title,
@@ -253,11 +246,7 @@ fun CountdownEditRoute(onBack: () -> Unit, vm: CountdownEditViewModel = hiltView
                 minLines = 2,
                 modifier = Modifier.fillMaxWidth(),
             )
-
-            Button(
-                onClick = { vm.save(onBack) },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-            ) { Text(stringResource(com.meolist.core.R.string.core_save)) }
+            Spacer(Modifier.height(24.dp))
         }
     }
 

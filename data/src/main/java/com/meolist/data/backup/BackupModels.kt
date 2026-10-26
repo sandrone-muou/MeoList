@@ -1,6 +1,7 @@
 package com.meolist.data.backup
 
 import com.meolist.domain.settings.AppSettings
+import com.meolist.domain.settings.MonthChartStyle
 import java.time.DayOfWeek
 import kotlinx.serialization.Serializable
 
@@ -194,6 +195,7 @@ data class SettingsDto(
     val urgentDays: Int,
     val stopTimerOnTaskComplete: Boolean,
     val defaultReminderMinute: Int,
+    val monthChartStyle: String = MonthChartStyle.HEATMAP.name,
 ) {
     fun toSettings(): AppSettings = AppSettings(
         multipleTimers = multipleTimers,
@@ -202,6 +204,8 @@ data class SettingsDto(
         urgentDays = urgentDays.coerceIn(1, 30),
         stopTimerOnTaskComplete = stopTimerOnTaskComplete,
         defaultReminderMinute = defaultReminderMinute.coerceIn(0, 1439),
+        monthChartStyle = runCatching { MonthChartStyle.valueOf(monthChartStyle) }
+            .getOrDefault(MonthChartStyle.HEATMAP),
     )
 
     companion object {
@@ -212,6 +216,7 @@ data class SettingsDto(
             urgentDays = settings.urgentDays,
             stopTimerOnTaskComplete = settings.stopTimerOnTaskComplete,
             defaultReminderMinute = settings.defaultReminderMinute,
+            monthChartStyle = settings.monthChartStyle.name,
         )
     }
 }

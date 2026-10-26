@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -34,10 +33,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,7 +58,11 @@ import com.meolist.core.ui.ColorPicker
 import com.meolist.core.ui.ConfirmDialog
 import com.meolist.core.ui.MeoIconPicker
 import com.meolist.core.ui.MeoPalette
+import com.meolist.core.ui.accentColor
+import com.meolist.core.ui.components.MeoScaffold
+import com.meolist.core.ui.components.rememberBackGuard
 import com.meolist.core.ui.durationText
+import com.meolist.core.ui.readableOn
 import com.meolist.domain.common.ApplicationScope
 import com.meolist.domain.tracker.ActivityGoal
 import com.meolist.domain.tracker.ActivityType
@@ -80,6 +81,9 @@ data class TypeEditState(
     val type: ActivityType = ActivityType(name = "", icon = ActivityIcons.DEFAULT, color = MeoPalette.default),
     /** Target seconds per period; absent means no goal. */
     val goals: Map<GoalPeriod, Long> = emptyMap(),
+    /** Snapshot at load time; any difference means unsaved edits. */
+    val original: ActivityType? = null,
+    val originalGoals: Map<GoalPeriod, Long>? = null,
     val isNew: Boolean = true,
 )
 
@@ -99,9 +103,12 @@ class ActivityTypeEditViewModel @Inject constructor(
         viewModelScope.launch {
             if (typeId == 0L) {
                 val count = types.getTypes().size
+                val fresh = ActivityType(name = "", icon = ActivityIcons.DEFAULT, color = MeoPalette.colors[count % MeoPalette.colors.size])
                 _state.value = TypeEditState(
                     loaded = true,
-                    type = ActivityType(name = "", icon = ActivityIcons.DEFAULT, color = MeoPalette.colors[count % MeoPalette.colors.size]),
+                    type = fresh,
+                    original = fresh,
+                    originalGoals = emptyMap(),
                 )
             } else {
                 val type = types.getType(typeId)
@@ -109,7 +116,15 @@ class ActivityTypeEditViewModel @Inject constructor(
                 _state.value = if (type == null) {
                     TypeEditState(loaded = true)
                 } else {
-                    TypeEditState(loaded = true, type = type, goals = goals.associate { it.period to it.targetSec }, isNew = false)
+                    val goalMap = goals.associate { it.period to it.targetSec }
+                    TypeEditState(
+                        loaded = true,
+                        type = type,
+                        goals = goalMap,
+                        original = type,
+                        originalGoals = goalMap,
+                        isNew = false,
+                    )
                 }
             }
         }
@@ -156,55 +171,51 @@ fun ActivityTypeEditRoute(onBack: () -> Unit, vm: ActivityTypeEditViewModel = hi
     var editingGoal by remember { mutableStateOf<GoalPeriod?>(null) }
     var nameError by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(if (state.isNew) R.string.tracker_new_type else R.string.tracker_edit_type)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(com.meolist.core.R.string.core_back))
+    val dirty = state.original != null &&
+        (state.type != state.original || state.goals != state.originalGoals)
+    val guard = rememberBackGuard(dirty = dirty, onBack = onBack)
+
+    MeoScaffold(
+        title = stringResource(if (state.isNew) R.string.tracker_new_type else R.string.tracker_edit_type),
+        onBack = guard.request,
+        actions = {
+            IconButton(onClick = {
+                nameError = state.type.name.isBlank()
+                vm.save(onBack)
+            }) {
+                Icon(Icons.Outlined.Check, stringResource(com.meolist.core.R.string.core_save))
+            }
+            if (!state.isNew) {
+                Box {
+                    IconButton(onClick = { menu = true }) {
+                        Icon(Icons.Outlined.MoreVert, stringResource(com.meolist.core.R.string.core_more_options))
                     }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        nameError = state.type.name.isBlank()
-                        vm.save(onBack)
-                    }) {
-                        Icon(Icons.Outlined.Check, stringResource(com.meolist.core.R.string.core_save))
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(if (state.type.archived) R.string.tracker_unarchive else R.string.tracker_archive)) },
+                            onClick = { menu = false; vm.setArchived(!state.type.archived, onBack) },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(com.meolist.core.R.string.core_delete)) },
+                            onClick = { menu = false; confirmDelete = true },
+                        )
                     }
-                    if (!state.isNew) {
-                        Box {
-                            IconButton(onClick = { menu = true }) {
-                                Icon(Icons.Outlined.MoreVert, stringResource(com.meolist.core.R.string.core_more_options))
-                            }
-                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(if (state.type.archived) R.string.tracker_unarchive else R.string.tracker_archive)) },
-                                    onClick = { menu = false; vm.setArchived(!state.type.archived, onBack) },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(com.meolist.core.R.string.core_delete)) },
-                                    onClick = { menu = false; confirmDelete = true },
-                                )
-                            }
-                        }
-                    }
-                },
-            )
+                }
+            }
         },
     ) { padding ->
-        if (!state.loaded) return@Scaffold
+        if (!state.loaded) return@MeoScaffold
         Column(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = com.meolist.core.theme.Meo.spacing.screen),
         ) {
-            val color = Color(state.type.color)
+            val color = accentColor(state.type.color)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(48.dp).clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
-                    Icon(ActivityIcons.of(state.type.icon), null, tint = Color.White)
+                    Icon(ActivityIcons.of(state.type.icon), null, tint = color.readableOn())
                 }
                 Spacer(Modifier.width(16.dp))
                 OutlinedTextField(

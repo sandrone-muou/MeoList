@@ -5,9 +5,11 @@
     <string name="tracker_new_type">New activity</string>
     <string name="tracker_edit_type">Edit activity</string>
     <string name="tracker_stop">Stop</string>
+    <string name="tracker_start">Start</string>
     <string name="tracker_stop_all">Stop all timers</string>
     <string name="tracker_running_count">%1$d running</string>
     <string name="tracker_today_total">Today %1$s</string>
+    <string name="tracker_today_label">Today\'s total</string>
     <string name="tracker_goal_progress_day">%1$s / %2$s today</string>
     <string name="tracker_goal_progress_week">%1$s / %2$s this week</string>
     <string name="tracker_goal_progress_month">%1$s / %2$s this month</string>
@@ -47,6 +49,7 @@
     <string name="tracker_next_day">Next day</string>
     <string name="tracker_day_total">Total %1$s</string>
     <string name="tracker_no_records">Nothing recorded on this day</string>
+    <string name="tracker_no_records_body">Start a timer, or add one manually.</string>
     <string name="tracker_record_add">Add record</string>
     <string name="tracker_record_new">New record</string>
     <string name="tracker_record_edit">Edit record</string>

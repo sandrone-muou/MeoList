@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.meolist.core.ui.ActivityIcons
+import com.meolist.core.ui.accentColor
 import com.meolist.core.ui.durationText
 import com.meolist.core.ui.elapsedText
 import com.meolist.core.ui.rememberReminderPermissionState
@@ -89,11 +90,11 @@ internal fun TimerRow(
             supportingContent = {
                 Text(
                     elapsedText((now - running.startedAt).coerceAtLeast(0)),
-                    color = Color(type.color),
+                    color = accentColor(type.color),
                     style = MaterialTheme.typography.titleMedium,
                 )
             },
-            leadingContent = { Icon(ActivityIcons.of(type.icon), null, tint = Color(type.color)) },
+            leadingContent = { Icon(ActivityIcons.of(type.icon), null, tint = accentColor(type.color)) },
             trailingContent = {
                 FilledTonalIconButton(onClick = { vm.stopTimer(running.id) }) {
                     Icon(Icons.Outlined.Stop, stringResource(R.string.tasks_timer_stop))
@@ -148,7 +149,7 @@ private fun ActivityPickerDialog(
                                     .padding(vertical = 12.dp, horizontal = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Icon(ActivityIcons.of(type.icon), null, tint = Color(type.color))
+                                Icon(ActivityIcons.of(type.icon), null, tint = accentColor(type.color))
                                 Spacer(Modifier.width(16.dp))
                                 Text(type.name, style = MaterialTheme.typography.bodyLarge)
                             }

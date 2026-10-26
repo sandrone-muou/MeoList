@@ -14,11 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
@@ -27,7 +30,6 @@ import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Inbox
-import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.RestoreFromTrash
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
@@ -35,9 +37,12 @@ import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material3.Badge
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,7 +51,6 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -54,7 +58,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -66,15 +70,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.meolist.core.theme.Meo
 import com.meolist.core.ui.ColorDot
 import com.meolist.core.ui.ConfirmDialog
+import com.meolist.core.ui.components.EmptyState
+import com.meolist.core.ui.components.MeoScaffold
+import com.meolist.core.ui.components.rememberConfirmHaptic
 import com.meolist.domain.task.RepeatAdvance
 import com.meolist.domain.task.TaskFilter
 import com.meolist.domain.task.TaskItem
@@ -162,49 +171,47 @@ private fun TasksScreen(
             )
         },
     ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(filterTitle(state.filter, state)) },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Outlined.Menu, stringResource(R.string.tasks_open_lists))
-                        }
-                    },
-                    actions = {
-                        if (state.isTrash && state.groups.isNotEmpty()) {
-                            IconButton(onClick = { confirmEmptyTrash = true }) {
-                                Icon(Icons.Outlined.DeleteSweep, stringResource(R.string.tasks_empty_trash))
-                            }
-                        }
-                        IconButton(onClick = onSearch) {
-                            Icon(Icons.Outlined.Search, stringResource(R.string.tasks_search))
-                        }
-                    },
-                )
+        MeoScaffold(
+            title = filterTitle(state.filter, state),
+            large = true,
+            actions = {
+                if (state.isTrash && state.groups.isNotEmpty()) {
+                    IconButton(onClick = { confirmEmptyTrash = true }) {
+                        Icon(Icons.Outlined.DeleteSweep, stringResource(R.string.tasks_empty_trash))
+                    }
+                }
+                IconButton(onClick = onSearch) {
+                    Icon(Icons.Outlined.Search, stringResource(R.string.tasks_search))
+                }
+                IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                    Icon(Icons.AutoMirrored.Outlined.List, stringResource(R.string.tasks_open_lists))
+                }
             },
             floatingActionButton = {
-                if (!state.isTrash && state.filter != TaskFilter.Completed) {
-                    FloatingActionButton(onClick = { showQuickAdd = true }) {
-                        Icon(Icons.Outlined.Add, stringResource(R.string.tasks_add))
-                    }
+                if (!state.isTrash &&
+                    state.filter != TaskFilter.Completed &&
+                    (state.loading || state.groups.isNotEmpty())
+                ) {
+                    ExtendedFloatingActionButton(
+                        onClick = { showQuickAdd = true },
+                        icon = { Icon(Icons.Outlined.Add, null) },
+                        text = { Text(stringResource(R.string.tasks_new)) },
+                    )
                 }
             },
             snackbarHost = { SnackbarHost(snackbar) },
         ) { padding ->
-            if (!state.loading && state.groups.isEmpty()) {
-                EmptyState(state.filter, Modifier.padding(padding))
-            } else {
-                TaskGroupsList(
-                    state = state,
-                    contentPadding = padding,
-                    onOpenTask = onOpenTask,
-                    onToggle = onToggle,
-                    onTrash = trashWithUndo,
-                    onRestore = onRestore,
-                    onDeleteForever = onDeleteForever,
-                )
-            }
+            TaskGroupsList(
+                state = state,
+                contentPadding = padding,
+                onOpenTask = onOpenTask,
+                onToggle = onToggle,
+                onSelectFilter = onSelectFilter,
+                onTrash = trashWithUndo,
+                onRestore = onRestore,
+                onDeleteForever = onDeleteForever,
+                onNewTask = { showQuickAdd = true },
+            )
         }
     }
 
@@ -234,18 +241,61 @@ private fun TaskGroupsList(
     contentPadding: PaddingValues,
     onOpenTask: (Long) -> Unit,
     onToggle: (Long, Boolean) -> Unit,
+    onSelectFilter: (TaskFilter) -> Unit,
     onTrash: (Long) -> Unit,
     onRestore: (Long) -> Unit,
     onDeleteForever: (Long) -> Unit,
+    onNewTask: () -> Unit,
 ) {
     var completedExpanded by rememberSaveable { mutableStateOf(false) }
     val showList = state.filter !is TaskFilter.OfList
     val alwaysExpanded = state.filter == TaskFilter.Completed
 
     LazyColumn(
-        contentPadding = PaddingValues(top = contentPadding.calculateTopPadding(), bottom = 96.dp),
+        contentPadding = PaddingValues(
+            start = Meo.spacing.screen,
+            end = Meo.spacing.screen,
+            top = contentPadding.calculateTopPadding(),
+            bottom = 96.dp,
+        ),
         modifier = Modifier.fillMaxSize(),
     ) {
+        if (!state.isTrash) {
+            item(key = "overview") {
+                WorkloadCard(state)
+            }
+            item(key = "quick-filters") {
+                QuickFilters(state = state, onSelect = onSelectFilter)
+            }
+        }
+        if (state.groups.isEmpty()) {
+            item(key = "empty") {
+                val completed = state.filter == TaskFilter.Completed
+                EmptyState(
+                    icon = if (state.isTrash) Icons.Outlined.Delete else Icons.Outlined.CheckCircle,
+                    title = stringResource(
+                        when {
+                            state.isTrash -> R.string.tasks_trash_empty
+                            completed -> R.string.tasks_completed_empty
+                            else -> R.string.tasks_empty
+                        },
+                    ),
+                    body = stringResource(
+                        when {
+                            state.isTrash -> R.string.tasks_trash_hint
+                            completed -> R.string.tasks_completed_hint
+                            else -> R.string.tasks_empty_hint
+                        },
+                    ),
+                    modifier = Modifier.fillMaxWidth().padding(top = Meo.spacing.xl),
+                    primary = if (state.isTrash || completed) {
+                        null
+                    } else {
+                        stringResource(R.string.tasks_new) to onNewTask
+                    },
+                )
+            }
+        }
         state.groups.forEach { group ->
             val collapsible = group.section == TaskSection.COMPLETED && !alwaysExpanded
             val expanded = !collapsible || completedExpanded
@@ -261,36 +311,48 @@ private fun TaskGroupsList(
             }
             if (expanded) {
                 items(group.items, key = { it.task.id }) { item ->
-                    if (state.isTrash) {
-                        TaskRow(
-                            item = item,
-                            showList = showList,
-                            today = state.today,
-                            zone = state.zone,
-                            onToggle = {},
-                            onClick = { onOpenTask(item.task.id) },
-                            trailing = {
-                                IconButton(onClick = { onRestore(item.task.id) }) {
-                                    Icon(Icons.Outlined.RestoreFromTrash, stringResource(R.string.tasks_restore))
-                                }
-                                IconButton(onClick = { onDeleteForever(item.task.id) }) {
-                                    Icon(Icons.Outlined.DeleteForever, stringResource(R.string.tasks_delete_forever))
-                                }
-                            },
-                        )
-                    } else {
-                        SwipeToTrash(item, onTrash) {
-                            TaskRow(
+                    Box(Modifier.animateItem()) {
+                        if (state.isTrash) {
+                            Column {
+                                TaskRow(
+                                    item = item,
+                                    showList = showList,
+                                    today = state.today,
+                                    zone = state.zone,
+                                    onToggle = {},
+                                    onClick = { onOpenTask(item.task.id) },
+                                    trailing = {
+                                        IconButton(onClick = { onRestore(item.task.id) }) {
+                                            Icon(Icons.Outlined.RestoreFromTrash, stringResource(R.string.tasks_restore))
+                                        }
+                                        IconButton(onClick = { onDeleteForever(item.task.id) }) {
+                                            Icon(Icons.Outlined.DeleteForever, stringResource(R.string.tasks_delete_forever))
+                                        }
+                                    },
+                                )
+                                TaskRowDivider()
+                            }
+                        } else {
+                            SwipeTask(
                                 item = item,
-                                showList = showList,
-                                today = state.today,
-                                zone = state.zone,
-                                onToggle = { onToggle(item.task.id, it) },
-                                onClick = { onOpenTask(item.task.id) },
-                                modifier = Modifier.background(MaterialTheme.colorScheme.surface),
-                                hasReminder = item.task.id in state.reminderTaskIds,
-                                isTiming = item.task.id in state.timingTaskIds,
-                            )
+                                onToggle = { done -> onToggle(item.task.id, done) },
+                                onTrash = onTrash,
+                            ) {
+                                Column {
+                                    TaskRow(
+                                        item = item,
+                                        showList = showList,
+                                        today = state.today,
+                                        zone = state.zone,
+                                        onToggle = { onToggle(item.task.id, it) },
+                                        onClick = { onOpenTask(item.task.id) },
+                                        modifier = Modifier.background(MaterialTheme.colorScheme.background),
+                                        hasReminder = item.task.id in state.reminderTaskIds,
+                                        isTiming = item.task.id in state.timingTaskIds,
+                                    )
+                                    TaskRowDivider()
+                                }
+                            }
                         }
                     }
                 }
@@ -299,36 +361,166 @@ private fun TaskGroupsList(
     }
 }
 
+@Composable
+private fun TaskRowDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 56.dp, end = 4.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+    )
+}
+
+@Composable
+private fun WorkloadCard(state: TasksUiState) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(top = Meo.spacing.sm, bottom = Meo.spacing.sm),
+    ) {
+        WorkloadStat(
+            value = state.counts[TaskFilter.Today.key()] ?: 0,
+            label = stringResource(R.string.tasks_filter_today),
+            modifier = Modifier.weight(1f),
+        )
+        WorkloadDivider()
+        WorkloadStat(
+            value = state.counts[TaskFilter.Next7Days.key()] ?: 0,
+            label = stringResource(R.string.tasks_filter_next7),
+            modifier = Modifier.weight(1f),
+        )
+        WorkloadDivider()
+        WorkloadStat(
+            value = state.counts[TaskFilter.Inbox.key()] ?: 0,
+            label = stringResource(R.string.tasks_filter_inbox),
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun WorkloadStat(value: Int, label: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(value.toString(), style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.size(6.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun WorkloadDivider() {
+    VerticalDivider(
+        modifier = Modifier.height(20.dp),
+        color = MaterialTheme.colorScheme.outlineVariant,
+    )
+}
+
+@Composable
+private fun QuickFilters(state: TasksUiState, onSelect: (TaskFilter) -> Unit) {
+    val filters = listOf(
+        TaskFilter.Today,
+        TaskFilter.Inbox,
+        TaskFilter.Next7Days,
+        TaskFilter.All,
+        TaskFilter.Completed,
+    )
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        contentPadding = PaddingValues(top = Meo.spacing.sm, bottom = Meo.spacing.sm),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        items(filters) { filter ->
+            val selected = state.filter == filter
+            val background by animateColorAsState(
+                if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f) else Color.Transparent,
+                label = "filterBackground",
+            )
+            Box(
+                Modifier
+                    .clip(CircleShape)
+                    .background(background)
+                    .clickable { onSelect(filter) }
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    filterTitle(filter, state),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SwipeToTrash(item: TaskItem, onTrash: (Long) -> Unit, content: @Composable () -> Unit) {
+private fun SwipeTask(
+    item: TaskItem,
+    onToggle: (Boolean) -> Unit,
+    onTrash: (Long) -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val haptic = rememberConfirmHaptic()
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                onTrash(item.task.id)
-                true
-            } else {
-                false
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    haptic()
+                    onToggle(!item.task.isDone)
+                    false
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    haptic()
+                    onTrash(item.task.id)
+                    true
+                }
+                else -> false
             }
         },
     )
     SwipeToDismissBox(
         state = dismissState,
-        enableDismissFromStartToEnd = false,
+        enableDismissFromEndToStart = true,
         backgroundContent = {
+            val target = dismissState.targetValue
             val color by animateColorAsState(
-                if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
-                    MaterialTheme.colorScheme.errorContainer
-                } else {
-                    Color.Transparent
+                when (target) {
+                    SwipeToDismissBoxValue.StartToEnd -> Meo.colors.successContainer
+                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                    else -> Color.Transparent
                 },
                 label = "swipeBackground",
             )
+            val finish = target == SwipeToDismissBoxValue.StartToEnd
             Box(
-                Modifier.fillMaxSize().background(color).padding(horizontal = 24.dp),
-                contentAlignment = Alignment.CenterEnd,
+                Modifier
+                    .fillMaxSize()
+                    .background(color)
+                    .padding(horizontal = 24.dp),
+                contentAlignment = if (finish) Alignment.CenterStart else Alignment.CenterEnd,
             ) {
-                Icon(Icons.Outlined.Delete, null, tint = MaterialTheme.colorScheme.onErrorContainer)
+                if (target != SwipeToDismissBoxValue.Settled) {
+                    Icon(
+                        if (finish) Icons.Outlined.Check else Icons.Outlined.Delete,
+                        null,
+                        tint = if (finish) {
+                            Meo.colors.onSuccessContainer
+                        } else {
+                            MaterialTheme.colorScheme.onErrorContainer
+                        },
+                    )
+                }
             }
         },
     ) { content() }
@@ -347,13 +539,13 @@ private fun SectionHeader(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = expandable, onClick = onClick)
-            .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 4.dp),
+            .padding(start = 4.dp, end = 4.dp, top = 20.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.labelLarge,
+            color = if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.padding(start = 6.dp))
         Text(count.toString(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
@@ -365,29 +557,6 @@ private fun SectionHeader(
                 tint = MaterialTheme.colorScheme.outline,
             )
         }
-    }
-}
-
-@Composable
-private fun EmptyState(filter: TaskFilter, modifier: Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Icon(
-            if (filter == TaskFilter.Trash) Icons.Outlined.Delete else Icons.Outlined.CheckCircle,
-            null,
-            modifier = Modifier.size(56.dp),
-            tint = MaterialTheme.colorScheme.outlineVariant,
-        )
-        Spacer(Modifier.height(12.dp))
-        Text(
-            stringResource(if (filter == TaskFilter.Trash) R.string.tasks_trash_empty else R.string.tasks_empty),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
     }
 }
 

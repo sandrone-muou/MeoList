@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.today
+import com.meolist.domain.reminder.Reminder
 import com.meolist.domain.reminder.ReminderOwner
 import com.meolist.domain.reminder.ReminderRepository
 import com.meolist.domain.settings.AppPreferences
@@ -163,12 +164,13 @@ class TasksViewModel @Inject constructor(
         priority: Priority,
         listId: Long?,
         tagIds: Set<Long>,
+        reminderDaysBefore: Int?,
     ) {
         if (title.isBlank()) return
         val zone = clock.zone()
         val dueAt = date?.let { dueMillis(it, time, zone) }
         viewModelScope.launch {
-            interactor.add(
+            val id = interactor.add(
                 title = title,
                 listId = listId,
                 dueAt = dueAt,
@@ -176,6 +178,19 @@ class TasksViewModel @Inject constructor(
                 priority = priority,
                 tagIds = tagIds,
             )
+            if (reminderDaysBefore != null && dueAt != null) {
+                interactor.setReminders(
+                    id,
+                    listOf(
+                        Reminder(
+                            ownerType = ReminderOwner.TASK,
+                            ownerId = id,
+                            offsetMin = reminderDaysBefore * Reminder.DAY_MINUTES,
+                            minuteOfDay = Reminder.DEFAULT_MINUTE_OF_DAY,
+                        ),
+                    ),
+                )
+            }
         }
     }
 

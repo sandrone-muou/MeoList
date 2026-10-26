@@ -24,4 +24,7 @@
     <string name="stats_unknown_activity">已删除的活动</string>
     <string name="stats_pie_desc">各活动时长</string>
     <string name="stats_bar_desc">计时分布图</string>
+    <string name="stats_heatmap_hint">点击方块查看当天记录</string>
+    <string name="stats_heatmap_less">少</string>
+    <string name="stats_heatmap_more">多</string>
 </resources>

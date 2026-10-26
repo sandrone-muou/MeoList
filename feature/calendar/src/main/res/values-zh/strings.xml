@@ -20,4 +20,16 @@
     <string name="calendar_yearly">每年</string>
     <string name="calendar_unknown_activity">活动</string>
     <string name="calendar_undo_check">取消打卡</string>
+    <string name="calendar_habit_daily">每日</string>
+    <string name="calendar_habit_weekly">每周 %1$d 次</string>
+    <string name="calendar_countdown_today">就是今天</string>
+    <plurals name="calendar_days_away">
+        <item quantity="other">还有 %d 天</item>
+    </plurals>
+    <plurals name="calendar_days_ago">
+        <item quantity="other">已过 %d 天</item>
+    </plurals>
+    <plurals name="calendar_days_since">
+        <item quantity="other">已经 %d 天</item>
+    </plurals>
 </resources>

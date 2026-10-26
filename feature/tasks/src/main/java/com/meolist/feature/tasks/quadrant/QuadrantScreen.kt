@@ -1,5 +1,6 @@
 package com.meolist.feature.tasks.quadrant
 
+import com.meolist.core.ui.components.MeoScaffold
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,6 +31,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -131,7 +133,7 @@ class QuadrantViewModel @Inject constructor(
 private data class QuadrantStyle(
     val label: Int,
     val icon: ImageVector,
-    val container: Color,
+    val tint: Color,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -158,19 +160,11 @@ fun QuadrantRoute(
         hovered = null
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.quadrant_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(com.meolist.core.R.string.core_back))
-                    }
-                },
-            )
-        },
+    MeoScaffold(
+        title = stringResource(R.string.quadrant_title),
+        onBack = onBack,
     ) { padding ->
-        if (!state.loaded) return@Scaffold
+        if (!state.loaded) return@MeoScaffold
         Box(
             Modifier
                 .padding(padding)
@@ -198,7 +192,7 @@ fun QuadrantRoute(
                         style = QuadrantStyle(
                             R.string.quadrant_do,
                             Icons.Outlined.PriorityHigh,
-                            MaterialTheme.colorScheme.errorContainer,
+                            MaterialTheme.colorScheme.error,
                         ),
                         today = state.today,
                         hovered = hovered,
@@ -226,7 +220,7 @@ fun QuadrantRoute(
                         style = QuadrantStyle(
                             R.string.quadrant_schedule,
                             Icons.Outlined.Event,
-                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.primary,
                         ),
                         today = state.today,
                         hovered = hovered,
@@ -256,7 +250,7 @@ fun QuadrantRoute(
                         style = QuadrantStyle(
                             R.string.quadrant_delegate,
                             Icons.Outlined.People,
-                            MaterialTheme.colorScheme.tertiaryContainer,
+                            MaterialTheme.colorScheme.tertiary,
                         ),
                         today = state.today,
                         hovered = hovered,
@@ -284,7 +278,7 @@ fun QuadrantRoute(
                         style = QuadrantStyle(
                             R.string.quadrant_later,
                             Icons.Outlined.Schedule,
-                            MaterialTheme.colorScheme.surfaceContainerHigh,
+                            MaterialTheme.colorScheme.onSurfaceVariant,
                         ),
                         today = state.today,
                         hovered = hovered,
@@ -367,10 +361,9 @@ private fun QuadrantCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(style.container)
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                    .padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 8.dp),
             ) {
-                Icon(style.icon, null, modifier = Modifier.size(16.dp))
+                Icon(style.icon, null, tint = style.tint, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(
                     stringResource(style.label),
@@ -379,8 +372,13 @@ private fun QuadrantCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(tasks.size.toString(), style = MaterialTheme.typography.labelMedium)
+                Text(
+                    tasks.size.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
             if (tasks.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(

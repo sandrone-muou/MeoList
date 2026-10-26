@@ -15,6 +15,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.Alarm
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material3.AssistChip
@@ -24,6 +25,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -44,8 +47,12 @@ import androidx.compose.ui.unit.dp
 import com.meolist.core.ui.ColorDot
 import com.meolist.core.ui.MeoDatePickerDialog
 import com.meolist.core.ui.relativeDateLabel
+import com.meolist.core.ui.rememberReminderPermissionState
+import com.meolist.domain.reminder.Reminder
+import com.meolist.domain.reminder.ReminderOwner
 import com.meolist.domain.task.Priority
 import com.meolist.domain.task.TaskList
+import com.meolist.feature.tasks.detail.reminderLabel
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -56,6 +63,7 @@ typealias AddTaskCallback = (
     priority: Priority,
     listId: Long?,
     tagIds: Set<Long>,
+    reminderDaysBefore: Int?,
 ) -> Unit
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,11 +80,13 @@ internal fun QuickAddSheet(
     var date by remember { mutableStateOf(defaults.date) }
     var priority by remember { mutableStateOf(Priority.NONE) }
     var listId by remember { mutableStateOf(defaults.listId) }
+    var reminderDaysBefore by remember { mutableStateOf<Int?>(null) }
+    val permissions = rememberReminderPermissionState()
     val focus = remember { FocusRequester() }
 
     val submit = {
         if (title.isNotBlank()) {
-            onAdd(title, date, null, priority, listId, defaults.tagIds)
+            onAdd(title, date, null, priority, listId, defaults.tagIds, reminderDaysBefore.takeIf { date != null })
             title = ""
         }
     }
@@ -101,9 +111,19 @@ internal fun QuickAddSheet(
                 modifier = Modifier.padding(top = 8.dp).horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                DateChip(date, today) { date = it }
+                DateChip(date, today) {
+                    date = it
+                    if (it == null) reminderDaysBefore = null
+                }
                 PriorityChip(priority) { priority = it }
                 ListChip(listId, lists) { listId = it }
+                ReminderChip(reminderDaysBefore) { days ->
+                    if (days != null) {
+                        if (date == null) date = today
+                        permissions.requestNotificationsIfNeeded()
+                    }
+                    reminderDaysBefore = days
+                }
             }
         }
     }
@@ -130,6 +150,51 @@ private fun DateChip(date: LocalDate?, today: LocalDate, onChange: (LocalDate?) 
     }
     if (picker) {
         MeoDatePickerDialog(initial = date ?: today, onConfirm = onChange, onDismiss = { picker = false })
+    }
+}
+
+@Composable
+private fun ReminderChip(daysBefore: Int?, onChange: (Int?) -> Unit) {
+    var menu by remember { mutableStateOf(false) }
+    val reminder = daysBefore?.let {
+        Reminder(
+            ownerType = ReminderOwner.TASK,
+            ownerId = 0,
+            offsetMin = it * Reminder.DAY_MINUTES,
+            minuteOfDay = Reminder.DEFAULT_MINUTE_OF_DAY,
+        )
+    }
+    Box {
+        AssistChip(
+            onClick = { menu = true },
+            label = { Text(reminder?.let { reminderLabel(it, allDay = true) } ?: stringResource(R.string.tasks_reminders)) },
+            leadingIcon = {
+                Icon(
+                    Icons.Outlined.Alarm,
+                    null,
+                    Modifier.size(AssistChipDefaults.IconSize),
+                    tint = if (reminder != null) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                )
+            },
+        )
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.tasks_none)) },
+                onClick = { onChange(null); menu = false },
+            )
+            listOf(0, 1, 7).forEach { days ->
+                val option = Reminder(
+                    ownerType = ReminderOwner.TASK,
+                    ownerId = 0,
+                    offsetMin = days * Reminder.DAY_MINUTES,
+                    minuteOfDay = Reminder.DEFAULT_MINUTE_OF_DAY,
+                )
+                DropdownMenuItem(
+                    text = { Text(reminderLabel(option, allDay = true)) },
+                    onClick = { onChange(days); menu = false },
+                )
+            }
+        }
     }
 }
 

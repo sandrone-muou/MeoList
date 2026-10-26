@@ -34,10 +34,17 @@
     <string name="tasks_delete_forever">Delete forever</string>
     <string name="tasks_delete_forever_message">This task and its subtasks will be deleted permanently.</string>
     <string name="tasks_trash_empty">Trash is empty</string>
-    <string name="tasks_empty">No tasks here. Tap + to add one.</string>
+    <string name="tasks_empty">No tasks here yet</string>
+    <string name="tasks_empty_hint">Add your first task to plan the day.</string>
+    <string name="tasks_completed_empty">No completed tasks yet</string>
+    <string name="tasks_completed_hint">Tasks you check off will show up here.</string>
+    <string name="tasks_trash_hint">Deleted tasks stay here until you empty the trash.</string>
+    <string name="tasks_new">New task</string>
     <string name="tasks_drawer_title">MeoList</string>
     <string name="tasks_drawer_lists">Lists</string>
     <string name="tasks_drawer_tags">Tags</string>
+    <string name="tasks_manage_empty_title">No lists or tags yet</string>
+    <string name="tasks_manage_empty_body">Create lists, folders and tags to keep tasks organised.</string>
     <string name="tasks_manage_lists">Manage lists &amp; tags</string>
 
     <string name="tasks_add_hint">What would you like to do?</string>
@@ -65,6 +72,7 @@
 
     <string name="tasks_search_hint">Search tasks</string>
     <string name="tasks_search_no_results">No matching tasks</string>
+    <string name="tasks_search_empty_body">Try another keyword, or check the spelling.</string>
 
     <string name="tasks_new_list">New list</string>
     <string name="tasks_new_folder">New folder</string>
@@ -159,7 +167,7 @@
     <string name="tasks_timer_list_default">Use for this list by default</string>
     <string name="tasks_timer_new_type">New activity</string>
     <string name="quadrant_title">Four quadrants</string>
-    <string name="quadrant_hint">Important comes from the priority; urgent means due within %1$s. Drag a task to change its priority; the due date picks the row.</string>
+    <string name="quadrant_hint">Importance comes from priority; anything due within %1$s counts as urgent. Dragging changes priority only; the quadrant follows priority and due date.</string>
     <string name="quadrant_do">Do now</string>
     <string name="quadrant_schedule">Schedule</string>
     <string name="quadrant_delegate">Delegate</string>

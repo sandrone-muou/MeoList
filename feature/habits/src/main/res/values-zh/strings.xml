@@ -39,6 +39,11 @@
     <string name="habits_delete_title">删除“%1$s”？</string>
     <string name="habits_delete_text">它的所有打卡记录也会被删除。如需保留记录，请改为归档。</string>
     <string name="habits_empty_title">还没有习惯</string>
+    <string name="habits_week_title">本周打卡</string>
+    <string name="habits_today_title">今日进度</string>
+    <string name="habits_longest_streak">最长连续 %1$d 天</string>
+    <string name="habits_week_caption">近 7 天每天完成的习惯数</string>
+    <string name="habits_week_today">今天已打卡 %1$d / %2$d</string>
     <string name="habits_empty_text">在这里打卡，之后这些记录还会变成农场的养分。</string>
     <string name="habits_add_suggested">添加阅读、喝水与冥想</string>
     <string name="habits_suggest_read">阅读 20 页</string>

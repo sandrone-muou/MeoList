@@ -1,5 +1,6 @@
 package com.meolist.feature.habits
 
+import com.meolist.core.ui.components.MeoScaffold
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -65,7 +66,10 @@ import androidx.lifecycle.viewModelScope
 import com.meolist.core.navigation.Routes
 import com.meolist.core.ui.ActivityIcons
 import com.meolist.core.ui.ConfirmDialog
+import com.meolist.core.ui.accentColor
+import com.meolist.core.ui.components.MeoProgressBar
 import com.meolist.core.ui.currentLocale
+import com.meolist.core.ui.readableOn
 import com.meolist.domain.common.ApplicationScope
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.today
@@ -164,55 +168,47 @@ fun HabitDetailRoute(
     var month by rememberSaveable { mutableStateOf("") }
     var countedDay by remember { mutableStateOf<LocalDate?>(null) }
 
-    val habitColor = habit?.let { Color(it.color) } ?: MaterialTheme.colorScheme.primary
+    val habitColor = habit?.let { accentColor(it.color) } ?: MaterialTheme.colorScheme.primary
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(habit?.name ?: "", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(com.meolist.core.R.string.core_back))
+    MeoScaffold(
+        title = habit?.name ?: "",
+        onBack = onBack,
+        actions = {
+            if (habit != null) {
+                Box {
+                    IconButton(onClick = { menu = true }) {
+                        Icon(Icons.Outlined.MoreVert, stringResource(com.meolist.core.R.string.core_more_options))
                     }
-                },
-                actions = {
-                    if (habit != null) {
-                        Box {
-                            IconButton(onClick = { menu = true }) {
-                                Icon(Icons.Outlined.MoreVert, stringResource(com.meolist.core.R.string.core_more_options))
-                            }
-                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.habits_edit)) },
-                                    onClick = { menu = false; onEdit(habit.id) },
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.habits_edit)) },
+                            onClick = { menu = false; onEdit(habit.id) },
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(
+                                        if (habit.archived) R.string.habits_unarchive else R.string.habits_archive,
+                                    ),
                                 )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            stringResource(
-                                                if (habit.archived) R.string.habits_unarchive else R.string.habits_archive,
-                                            ),
-                                        )
-                                    },
-                                    onClick = { menu = false; vm.setArchived(!habit.archived, onBack) },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(com.meolist.core.R.string.core_delete)) },
-                                    onClick = { menu = false; confirmDelete = true },
-                                )
-                            }
-                        }
+                            },
+                            onClick = { menu = false; vm.setArchived(!habit.archived, onBack) },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(com.meolist.core.R.string.core_delete)) },
+                            onClick = { menu = false; confirmDelete = true },
+                        )
                     }
-                },
-            )
+                }
+            }
         },
     ) { padding ->
-        if (!state.loaded) return@Scaffold
+        if (!state.loaded) return@MeoScaffold
         if (habit == null) {
             Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(stringResource(R.string.habits_missing), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            return@Scaffold
+            return@MeoScaffold
         }
         val today = state.today
         val color = habitColor
@@ -221,13 +217,13 @@ fun HabitDetailRoute(
                 .padding(padding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = com.meolist.core.theme.Meo.spacing.screen),
         ) {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(52.dp).clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
-                            Icon(ActivityIcons.of(habit.icon), null, tint = Color.White, modifier = Modifier.size(28.dp))
+                            Icon(ActivityIcons.of(habit.icon), null, tint = color.readableOn(), modifier = Modifier.size(28.dp))
                         }
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) {
@@ -248,12 +244,10 @@ fun HabitDetailRoute(
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Spacer(Modifier.height(8.dp))
-                        androidx.compose.material3.LinearProgressIndicator(
-                            progress = { (value.toFloat() / target).coerceIn(0f, 1f) },
+                        MeoProgressBar(
+                            progress = (value.toFloat() / target).coerceIn(0f, 1f),
                             color = color,
-                            trackColor = color.copy(alpha = 0.2f),
-                            drawStopIndicator = {},
-                            modifier = Modifier.fillMaxWidth(),
+                            height = 10.dp,
                         )
                         Spacer(Modifier.height(12.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -283,7 +277,7 @@ fun HabitDetailRoute(
                             onClick = { vm.toggle(today) },
                             colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
                                 containerColor = if (state.doneToday) color else MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = if (state.doneToday) Color.White else MaterialTheme.colorScheme.onSecondaryContainer,
+                                contentColor = if (state.doneToday) color.readableOn() else MaterialTheme.colorScheme.onSecondaryContainer,
                             ),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -369,7 +363,7 @@ private fun HabitCalendarCard(
     onMonth: (YearMonth) -> Unit,
     onDayClick: (LocalDate) -> Unit,
 ) {
-    val color = Color(habit.color)
+    val color = accentColor(habit.color)
     val locale = currentLocale()
     val byDay = state.checks.associate { it.day to it.value }
     val firstDay = state.firstDayOfWeek
@@ -453,7 +447,7 @@ private fun DayCell(
         else -> Color.Transparent
     }
     val textColor = when {
-        done -> Color.White
+        done -> color.readableOn()
         future || !scheduled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
         else -> MaterialTheme.colorScheme.onSurface
     }

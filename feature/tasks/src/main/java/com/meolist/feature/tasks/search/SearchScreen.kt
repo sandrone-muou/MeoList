@@ -3,22 +3,17 @@ package com.meolist.feature.tasks.search
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,6 +28,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.meolist.core.ui.components.EmptyState
+import com.meolist.core.ui.components.MeoScaffold
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.today
 import com.meolist.domain.task.RepeatAdvance
@@ -100,41 +97,41 @@ fun SearchRoute(onBack: () -> Unit, onOpenTask: (Long) -> Unit, vm: SearchViewMo
     val advance by vm.lastAdvance.collectAsStateWithLifecycle()
     RepeatAdvanceEffect(advance, snackbar, today, zone, onUndo = { vm.undoRepeat(it) }, onConsumed = vm::consumeAdvance)
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbar) },
-        topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(com.meolist.core.R.string.core_back))
-                    }
-                },
-                title = {
-                    TextField(
-                        value = query,
-                        onValueChange = { vm.query.value = it },
-                        placeholder = { Text(stringResource(R.string.tasks_search_hint)) },
-                        singleLine = true,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                        ),
-                        modifier = Modifier.fillMaxWidth().focusRequester(focus),
-                    )
-                },
+    MeoScaffold(
+        onBack = onBack,
+        titleContent = {
+            TextField(
+                value = query,
+                onValueChange = { vm.query.value = it },
+                placeholder = { Text(stringResource(R.string.tasks_search_hint)) },
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
+                modifier = Modifier.fillMaxWidth().focusRequester(focus),
             )
         },
+        snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        if (query.isNotBlank() && results.isEmpty()) {
-            Text(
-                stringResource(R.string.tasks_search_no_results),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(padding).padding(24.dp),
-            )
-        }
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = padding.calculateTopPadding())) {
+        LazyColumn(
+            Modifier.fillMaxSize().imePadding(),
+            contentPadding = PaddingValues(
+                top = padding.calculateTopPadding(),
+                bottom = padding.calculateBottomPadding() + 16.dp,
+            ),
+        ) {
+            if (query.isNotBlank() && results.isEmpty()) {
+                item {
+                    EmptyState(
+                        icon = Icons.Outlined.Search,
+                        title = stringResource(R.string.tasks_search_no_results),
+                        body = stringResource(R.string.tasks_search_empty_body),
+                    )
+                }
+            }
             items(results, key = { it.task.id }) { item ->
                 TaskRow(
                     item = item,

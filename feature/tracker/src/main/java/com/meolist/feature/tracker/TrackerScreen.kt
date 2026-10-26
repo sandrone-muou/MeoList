@@ -1,8 +1,31 @@
 package com.meolist.feature.tracker
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,9 +35,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -24,14 +50,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.StopCircle
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,10 +69,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,17 +80,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.meolist.core.theme.Meo
+import com.meolist.core.theme.tabular
 import com.meolist.core.ui.ActivityIcons
 import com.meolist.core.ui.ConfirmDialog
 import com.meolist.core.ui.MeoPalette
 import com.meolist.core.ui.MeoTimePickerDialog
+import com.meolist.core.ui.accentColor
+import com.meolist.core.ui.components.EmptyState
+import com.meolist.core.ui.components.MeoProgressBar
+import com.meolist.core.ui.components.MeoScaffold
+import com.meolist.core.ui.components.rememberConfirmHaptic
 import com.meolist.core.ui.durationText
+import com.meolist.core.ui.readableOn
 import com.meolist.core.ui.elapsedText
 import com.meolist.core.ui.rememberReminderPermissionState
 import com.meolist.core.ui.rememberTicker
@@ -90,34 +131,31 @@ fun TrackerRoute(
     var editingRunning by remember { mutableStateOf<TypeCard?>(null) }
     var discarding by remember { mutableStateOf<RunningTimer?>(null) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.tracker_title)) },
-                actions = {
-                    IconButton(onClick = onRecords) {
-                        Icon(Icons.Outlined.History, stringResource(R.string.tracker_records_title))
+    MeoScaffold(
+        title = stringResource(R.string.tracker_title),
+        large = true,
+        actions = {
+            IconButton(onClick = onRecords) {
+                Icon(Icons.Outlined.History, stringResource(R.string.tracker_records_title))
+            }
+            Box {
+                IconButton(onClick = { menu = true }) {
+                    Icon(Icons.Outlined.MoreVert, stringResource(com.meolist.core.R.string.core_more_options))
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    if (state.runningCount > 0) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.tracker_stop_all)) },
+                            onClick = { menu = false; vm.stopAll() },
+                        )
                     }
-                    Box {
-                        IconButton(onClick = { menu = true }) {
-                            Icon(Icons.Outlined.MoreVert, stringResource(com.meolist.core.R.string.core_more_options))
-                        }
-                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            if (state.runningCount > 0) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.tracker_stop_all)) },
-                                    onClick = { menu = false; vm.stopAll() },
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.tracker_archived_types, state.archived.size)) },
-                                enabled = state.archived.isNotEmpty(),
-                                onClick = { menu = false; showArchived = true },
-                            )
-                        }
-                    }
-                },
-            )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.tracker_archived_types, state.archived.size)) },
+                        enabled = state.archived.isNotEmpty(),
+                        onClick = { menu = false; showArchived = true },
+                    )
+                }
+            }
         },
         floatingActionButton = {
             if (state.cards.isNotEmpty()) {
@@ -136,18 +174,26 @@ fun TrackerRoute(
             )
             else -> LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 160.dp),
-                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 88.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(
+                    start = Meo.spacing.screen,
+                    end = Meo.spacing.screen,
+                    top = Meo.spacing.xs,
+                    bottom = Meo.spacing.bottomContent,
+                ),
+                horizontalArrangement = Arrangement.spacedBy(Meo.spacing.md),
+                verticalArrangement = Arrangement.spacedBy(Meo.spacing.md),
                 modifier = Modifier.padding(padding).fillMaxSize(),
             ) {
-                if (state.runningCount > 0) {
+                val runningCards = state.cards.filter { it.running != null }
+                if (runningCards.size > 1) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        Text(
-                            stringResource(R.string.tracker_running_count, state.runningCount),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 4.dp),
+                        RunningHero(
+                            cards = runningCards,
+                            now = now,
+                            onStop = { vm.toggle(it) },
+                            onStopAll = vm::stopAll,
+                            onAdjust = { editingRunning = it },
+                            modifier = Modifier.animateItem(),
                         )
                     }
                 }
@@ -156,6 +202,7 @@ fun TrackerRoute(
                         card = card,
                         windows = state.windows,
                         now = now,
+                        modifier = Modifier.animateItem(),
                         onToggle = {
                             if (card.running == null && !askedNotifications) {
                                 askedNotifications = true
@@ -217,10 +264,23 @@ private fun TypeCardView(
     onEditRunning: () -> Unit,
     onDiscard: () -> Unit,
     onArchive: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val color = Color(card.type.color)
+    val color = accentColor(card.type.color)
     val running = card.running
     var menu by remember { mutableStateOf(false) }
+    val haptic = rememberConfirmHaptic()
+    val pulse = rememberPulseAlpha()
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val buttonScale by animateFloatAsState(
+        targetValue = if (pressed) 0.97f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium,
+        ),
+        label = "trackerButtonScale",
+    )
 
     fun periodMs(period: GoalPeriod): Long {
         val window = windows[period] ?: return 0
@@ -230,23 +290,19 @@ private fun TypeCardView(
 
     Box {
         Card(
-            colors = CardDefaults.cardColors(
-                containerColor = if (running != null) color.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceContainerLow,
-            ),
-            modifier = Modifier
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            modifier = modifier
                 .fillMaxWidth()
-                .clip(CardDefaults.shape)
-                .combinedClickable(onClick = onToggle, onLongClick = { menu = true }),
+                .then(
+                    if (running != null) {
+                        Modifier.border(1.dp, color.copy(alpha = 0.26f + 0.22f * pulse), MaterialTheme.shapes.large)
+                    } else Modifier,
+                ),
         ) {
-            Column(Modifier.padding(12.dp)) {
+            Column(Modifier.padding(Meo.spacing.md)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.size(36.dp).clip(CircleShape).background(color),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(ActivityIcons.of(card.type.icon), null, tint = Color.White, modifier = Modifier.size(20.dp))
-                    }
-                    Spacer(Modifier.width(10.dp))
+                    RunningIcon(icon = card.type.icon, color = color, running = running != null)
+                    Spacer(Modifier.width(Meo.spacing.sm))
                     Text(
                         card.type.name,
                         style = MaterialTheme.typography.titleSmall,
@@ -254,46 +310,49 @@ private fun TypeCardView(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    if (running != null) {
+                    IconButton(onClick = { menu = true }, modifier = Modifier.size(32.dp)) {
                         Icon(
-                            Icons.Outlined.StopCircle,
-                            stringResource(R.string.tracker_stop),
-                            tint = color,
-                            modifier = Modifier.size(22.dp),
+                            Icons.Outlined.MoreVert,
+                            stringResource(com.meolist.core.R.string.core_more_options),
+                            modifier = Modifier.size(18.dp),
                         )
                     }
                 }
-                Spacer(Modifier.height(10.dp))
-                if (running != null) {
-                    Text(
-                        elapsedText(now - running.startedAt),
-                        style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = "tnum"),
-                    )
-                    val subtitle = card.runningTaskTitle ?: running.comment.takeIf { it.isNotBlank() }
-                    Text(
-                        subtitle ?: stringResource(R.string.tracker_today_total, durationText(periodMs(GoalPeriod.DAY))),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                } else {
-                    Text(
-                        stringResource(R.string.tracker_today_total, durationText(periodMs(GoalPeriod.DAY))),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Spacer(Modifier.height(Meo.spacing.sm))
+                Text(
+                    if (running != null) {
+                        elapsedText(now - running.startedAt)
+                    } else {
+                        durationText(periodMs(GoalPeriod.DAY))
+                    },
+                    style = MaterialTheme.typography.headlineSmall.tabular(),
+                    color = if (running != null) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+                Text(
+                    if (running != null) {
+                        card.runningTaskTitle
+                            ?: running.comment.takeIf { it.isNotBlank() }
+                            ?: stringResource(R.string.tracker_today_total, durationText(periodMs(GoalPeriod.DAY)))
+                    } else {
+                        stringResource(R.string.tracker_today_label)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 card.goal?.let { goal ->
                     val done = periodMs(goal.period)
                     val target = goal.targetSec * 1000
-                    Spacer(Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { (done.toFloat() / target).coerceIn(0f, 1f) },
+                    Spacer(Modifier.height(Meo.spacing.sm))
+                    MeoProgressBar(
+                        progress = (done.toFloat() / target).coerceIn(0f, 1f),
                         color = color,
-                        trackColor = color.copy(alpha = 0.2f),
-                        drawStopIndicator = {},
-                        modifier = Modifier.fillMaxWidth(),
+                        height = 6.dp,
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
@@ -301,6 +360,44 @@ private fun TypeCardView(
                         style = MaterialTheme.typography.labelSmall,
                         color = if (done >= target) color else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+                Spacer(Modifier.height(Meo.spacing.md))
+                if (running != null) {
+                    FilledTonalButton(
+                        onClick = {
+                            haptic()
+                            onToggle()
+                        },
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                            contentColor = MaterialTheme.colorScheme.primary,
+                        ),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                        interactionSource = interaction,
+                        modifier = Modifier.heightIn(min = 44.dp).scale(buttonScale),
+                    ) {
+                        Icon(Icons.Outlined.StopCircle, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.tracker_stop))
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            haptic()
+                            onToggle()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                        interactionSource = interaction,
+                        modifier = Modifier.heightIn(min = 44.dp).scale(buttonScale),
+                    ) {
+                        Icon(Icons.Outlined.PlayArrow, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.tracker_start))
+                    }
                 }
             }
         }
@@ -318,6 +415,219 @@ private fun TypeCardView(
             DropdownMenuItem(text = { Text(stringResource(R.string.tracker_edit_type)) }, onClick = { menu = false; onEdit() })
             DropdownMenuItem(text = { Text(stringResource(R.string.tracker_archive)) }, onClick = { menu = false; onArchive() })
         }
+    }
+}
+
+@Composable
+private fun RunningHero(
+    cards: List<TypeCard>,
+    now: Long,
+    onStop: (TypeCard) -> Unit,
+    onStopAll: () -> Unit,
+    onAdjust: (TypeCard) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val pulse = rememberPulseAlpha()
+    Card(
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = modifier.fillMaxWidth().animateContentSize(),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(Meo.spacing.lg)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PulseDot(color = MaterialTheme.colorScheme.primary, pulse = pulse)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    stringResource(R.string.tracker_running_count, cards.size),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                AnimatedVisibility(visible = cards.size > 1) {
+                    TextButton(
+                        onClick = onStopAll,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary,
+                        ),
+                    ) {
+                        Text(stringResource(R.string.tracker_stop_all))
+                    }
+                }
+            }
+            Spacer(Modifier.height(Meo.spacing.sm))
+            if (cards.size <= 2) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm)) {
+                    cards.forEach { card ->
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = fadeIn(tween(320)) + slideInVertically(tween(320)) { it / 4 },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            RunningTile(
+                                card = card,
+                                now = now,
+                                onStop = onStop,
+                                onAdjust = onAdjust,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
+                }
+            } else {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm)) {
+                    items(cards, key = { it.type.id }) { card ->
+                        AnimatedVisibility(
+                            visible = true,
+                            enter = fadeIn(tween(320)) + slideInVertically(tween(320)) { it / 4 },
+                        ) {
+                            RunningTile(
+                                card = card,
+                                now = now,
+                                onStop = onStop,
+                                onAdjust = onAdjust,
+                                modifier = Modifier.width(172.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RunningTile(
+    card: TypeCard,
+    now: Long,
+    onStop: (TypeCard) -> Unit,
+    onAdjust: (TypeCard) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val running = card.running ?: return
+    val haptic = rememberConfirmHaptic()
+    val pulse = rememberPulseAlpha()
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val tileScale by animateFloatAsState(
+        targetValue = if (pressed) 0.97f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium,
+        ),
+        label = "runningTileScale",
+    )
+    Row(
+        modifier
+            .scale(tileScale)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current) { onAdjust(card) }
+            .padding(start = Meo.spacing.md, end = 4.dp, top = Meo.spacing.sm, bottom = Meo.spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PulseDot(color = accentColor(card.type.color), pulse = pulse)
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                card.type.name,
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            AnimatedContent(
+                targetState = elapsedText(now - running.startedAt),
+                transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(160)) },
+                label = "runningElapsed",
+            ) { elapsed ->
+                Text(
+                    elapsed,
+                    style = MaterialTheme.typography.titleMedium.tabular(),
+                    maxLines = 1,
+                )
+            }
+        }
+        IconButton(
+            onClick = {
+                haptic()
+                onStop(card)
+            },
+            modifier = Modifier.size(36.dp),
+        ) {
+            Icon(
+                Icons.Outlined.StopCircle,
+                stringResource(R.string.tracker_stop),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun RunningIcon(icon: String, color: Color, running: Boolean) {
+    val pulse = rememberPulseAlpha()
+    val spin = rememberInfiniteTransition(label = "trackerSpin")
+    val angle by spin.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(2400, easing = LinearEasing), RepeatMode.Restart),
+        label = "trackerSpinAngle",
+    )
+    Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+        if (running) {
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(color.copy(alpha = 0.06f + 0.05f * pulse)),
+            )
+            Canvas(Modifier.size(46.dp)) {
+                val inset = 2.dp.toPx()
+                drawArc(
+                    color = color.copy(alpha = 0.65f),
+                    startAngle = angle,
+                    sweepAngle = 80f,
+                    useCenter = false,
+                    topLeft = Offset(inset, inset),
+                    size = Size(size.width - inset * 2, size.height - inset * 2),
+                    style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round),
+                )
+            }
+        }
+        Box(
+            Modifier.size(36.dp).clip(CircleShape).background(color),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(ActivityIcons.of(icon), null, tint = color.readableOn(), modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+@Composable
+private fun rememberPulseAlpha(): Float {
+    val transition = rememberInfiniteTransition(label = "trackerPulse")
+    val pulse by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "trackerPulseAlpha",
+    )
+    return pulse
+}
+
+@Composable
+private fun PulseDot(color: Color, pulse: Float) {
+    Box(Modifier.size(12.dp), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .size(12.dp)
+                .scale(0.7f + pulse * 0.3f)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.18f * pulse)),
+        )
+        Box(Modifier.size(6.dp).clip(CircleShape).background(color))
     }
 }
 
@@ -341,23 +651,14 @@ private fun EmptyTracker(
     ).mapIndexed { index, (name, icon, colorIndex) ->
         ActivityType(name = stringResource(name), icon = icon, color = MeoPalette.colors[colorIndex], sortOrder = index.toLong())
     }
-    Column(
-        modifier = modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(stringResource(R.string.tracker_empty_title), style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            stringResource(R.string.tracker_empty_text),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(24.dp))
-        Button(onClick = { onAddSuggested(suggestions) }) { Text(stringResource(R.string.tracker_add_suggested)) }
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onAddType) { Text(stringResource(R.string.tracker_new_type)) }
-    }
+    EmptyState(
+        icon = Icons.Outlined.Timer,
+        title = stringResource(R.string.tracker_empty_title),
+        body = stringResource(R.string.tracker_empty_text),
+        modifier = modifier.fillMaxSize(),
+        primary = stringResource(R.string.tracker_add_suggested) to { onAddSuggested(suggestions) },
+        secondary = stringResource(R.string.tracker_new_type) to onAddType,
+    )
 }
 
 @Composable
@@ -432,7 +733,7 @@ private fun ArchivedTypesDialog(
             Column {
                 types.forEach { type ->
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        Icon(ActivityIcons.of(type.icon), null, tint = Color(type.color), modifier = Modifier.size(20.dp))
+                        Icon(ActivityIcons.of(type.icon), null, tint = accentColor(type.color), modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(12.dp))
                         TextButton(onClick = { onEdit(type) }, modifier = Modifier.weight(1f)) {
                             Text(type.name, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())

@@ -1,6 +1,13 @@
 package com.meolist.feature.stats
 
+import com.meolist.core.ui.components.MeoScaffold
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,8 +20,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -32,6 +41,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,18 +51,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.meolist.core.ui.accentColor
 import com.meolist.core.ui.currentLocale
 import com.meolist.core.ui.durationText
+import com.meolist.core.ui.longDate
+import com.meolist.core.ui.readableOn
 import com.meolist.core.ui.charts.ChartBar
 import com.meolist.core.ui.charts.ChartSlice
 import com.meolist.core.ui.charts.DonutChart
@@ -60,6 +77,7 @@ import com.meolist.core.ui.charts.StackedBarChart
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.today
 import com.meolist.domain.settings.AppPreferences
+import com.meolist.domain.settings.MonthChartStyle
 import com.meolist.domain.stats.StatsBucket
 import com.meolist.domain.stats.StatsPeriod
 import com.meolist.domain.stats.StatsRange
@@ -97,6 +115,7 @@ data class StatsState(
     val types: List<ActivityType> = emptyList(),
     val selectedType: Long? = null,
     val firstDayOfWeek: java.time.DayOfWeek = java.time.DayOfWeek.MONDAY,
+    val monthChartStyle: MonthChartStyle = MonthChartStyle.HEATMAP,
 )
 
 private data class StatsInput(val period: StatsPeriod, val anchor: LocalDate)
@@ -129,11 +148,12 @@ class StatsViewModel @Inject constructor(
         val completedTasks: Int,
         val types: List<ActivityType>,
         val firstDayOfWeek: java.time.DayOfWeek,
+        val monthChartStyle: MonthChartStyle,
     )
 
     private val window: Flow<Window> = combine(input, prefs.settings) { i, settings ->
-        i to settings.firstDayOfWeek
-    }.distinctUntilChanged().flatMapLatest { (i, firstDay) ->
+        Triple(i, settings.firstDayOfWeek, settings.monthChartStyle)
+    }.distinctUntilChanged().flatMapLatest { (i, firstDay, chartStyle) ->
         val range = TimeStatsCalculator.range(i.period, i.anchor, firstDay)
         val previous = TimeStatsCalculator.shift(range, -1, firstDay)
         val zone = clock.zone()
@@ -158,6 +178,7 @@ class StatsViewModel @Inject constructor(
                 },
                 types = allTypes,
                 firstDayOfWeek = firstDay,
+                monthChartStyle = chartStyle,
             )
         }.combine(ticker) { w, _ -> w }
     }
@@ -173,6 +194,7 @@ class StatsViewModel @Inject constructor(
             types = w.types,
             selectedType = selectedType?.takeIf { id -> w.types.any { it.id == id } },
             firstDayOfWeek = w.firstDayOfWeek,
+            monthChartStyle = w.monthChartStyle,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsState())
 
@@ -208,25 +230,18 @@ fun StatsRoute(onBack: () -> Unit, vm: StatsViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val locale = currentLocale()
     var selectedBar by rememberSaveable { mutableStateOf(-1) }
+    var selectedDay by remember(state.range.start) { mutableStateOf<LocalDate?>(null) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.stats_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(com.meolist.core.R.string.core_back))
-                    }
-                },
-            )
-        },
+    MeoScaffold(
+        title = stringResource(R.string.stats_title),
+        onBack = onBack,
     ) { padding ->
         Column(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = com.meolist.core.theme.Meo.spacing.screen),
         ) {
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 StatsPeriod.entries.forEachIndexed { index, period ->
@@ -273,17 +288,28 @@ fun StatsRoute(onBack: () -> Unit, vm: StatsViewModel = hiltViewModel()) {
                 EmptyStats(Modifier.padding(vertical = 48.dp))
             } else {
                 SummaryCard(state)
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
                 PieCard(state, stats, types, vm)
-                Spacer(Modifier.height(12.dp))
-                BarCard(
-                    state = state,
-                    stats = stats,
-                    types = types,
-                    selectedBar = selectedBar,
-                    onSelectBar = { selectedBar = it ?: -1 },
-                    locale = locale,
-                )
+                Spacer(Modifier.height(10.dp))
+                if (state.period == StatsPeriod.MONTH && state.monthChartStyle == MonthChartStyle.HEATMAP) {
+                    MonthHeatmapCard(
+                        state = state,
+                        stats = stats,
+                        types = types,
+                        selectedDay = selectedDay,
+                        onSelectDay = { selectedDay = it },
+                        locale = locale,
+                    )
+                } else {
+                    BarCard(
+                        state = state,
+                        stats = stats,
+                        types = types,
+                        selectedBar = selectedBar,
+                        onSelectBar = { selectedBar = it ?: -1 },
+                        locale = locale,
+                    )
+                }
                 Spacer(Modifier.height(24.dp))
             }
         }
@@ -293,11 +319,18 @@ fun StatsRoute(onBack: () -> Unit, vm: StatsViewModel = hiltViewModel()) {
 @Composable
 private fun SummaryCard(state: StatsState) {
     val stats = state.stats ?: return
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(durationText(stats.totalMs), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.width(12.dp))
+    Card(
+        Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    durationText(stats.totalMs),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.width(8.dp))
                 ChangeBadge(current = stats.totalMs, previous = state.previousTotalMs)
                 Spacer(Modifier.weight(1f))
                 Text(
@@ -306,15 +339,13 @@ private fun SummaryCard(state: StatsState) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Spacer(Modifier.height(16.dp))
-            Row {
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 SummaryValue(stringResource(R.string.stats_daily_average), durationText(stats.dailyAverageMs), Modifier.weight(1f))
+                SummaryDivider()
                 SummaryValue(stringResource(R.string.stats_active_days), stats.activeDays.toString(), Modifier.weight(1f))
-                SummaryValue(
-                    stringResource(R.string.stats_tasks_done),
-                    state.completedTasks.toString(),
-                    Modifier.weight(1f),
-                )
+                SummaryDivider()
+                SummaryValue(stringResource(R.string.stats_tasks_done), state.completedTasks.toString(), Modifier.weight(1f))
             }
         }
     }
@@ -323,9 +354,23 @@ private fun SummaryCard(state: StatsState) {
 @Composable
 private fun SummaryValue(label: String, value: String, modifier: Modifier = Modifier) {
     Column(modifier) {
-        Text(value, style = MaterialTheme.typography.titleMedium)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
+}
+
+@Composable
+private fun SummaryDivider() {
+    VerticalDivider(
+        modifier = Modifier.height(24.dp).padding(horizontal = 8.dp),
+        color = MaterialTheme.colorScheme.outlineVariant,
+    )
 }
 
 @Composable
@@ -353,74 +398,110 @@ private fun PieCard(
         ChartSlice(
             key = totalOf.typeId,
             value = totalOf.ms.toFloat(),
-            color = types[totalOf.typeId]?.let { Color(it.color) } ?: MaterialTheme.colorScheme.outline,
+            color = types[totalOf.typeId]?.let { accentColor(it.color) } ?: MaterialTheme.colorScheme.outline,
         )
     }
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Text(stringResource(R.string.stats_by_activity), style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.height(12.dp))
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                DonutChart(
-                    slices = slices,
-                    selectedKey = state.selectedType,
-                    onSelect = vm::selectType,
-                    description = stringResource(R.string.stats_pie_desc),
-                    modifier = Modifier.width(210.dp),
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            stringResource(R.string.stats_total),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(durationText(total), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    }
+    Card(
+        Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.stats_by_activity), style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.weight(1f))
+                if (state.selectedType != null) {
+                    Text(
+                        types[state.selectedType]?.name.orEmpty(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .clip(MaterialTheme.shapes.small)
+                            .clickable { vm.selectType(null) }
+                            .padding(4.dp),
+                    )
                 }
             }
             Spacer(Modifier.height(8.dp))
-            stats.byType.forEach { totalOf ->
-                val type = types[totalOf.typeId]
-                val percent = (totalOf.ms * 100.0 / total).roundToInt()
-                val selected = state.selectedType == totalOf.typeId
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(MaterialTheme.shapes.small)
-                        .clickable { vm.selectType(totalOf.typeId) }
-                        .background(
-                            if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.fillMaxWidth(0.42f), contentAlignment = Alignment.Center) {
+                    DonutChart(
+                        slices = slices,
+                        selectedKey = state.selectedType,
+                        onSelect = vm::selectType,
+                        description = stringResource(R.string.stats_pie_desc),
+                        thickness = 20.dp,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                durationText(total),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                stringResource(R.string.stats_total),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    stats.byType.take(4).forEach { totalOf ->
+                        val type = types[totalOf.typeId]
+                        val percent = (totalOf.ms * 100.0 / total).roundToInt()
+                        val selected = state.selectedType == totalOf.typeId
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.small)
+                                .clickable { vm.selectType(totalOf.typeId) }
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
+                                )
+                                .padding(horizontal = 4.dp, vertical = 3.dp),
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(type?.let { accentColor(it.color) } ?: MaterialTheme.colorScheme.outline),
+                            )
+                            Spacer(Modifier.width(7.dp))
+                            Text(
+                                type?.name ?: stringResource(R.string.stats_unknown_activity),
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                "$percent%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.width(34.dp),
+                                textAlign = TextAlign.End,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                durationText(totalOf.ms),
+                                style = MaterialTheme.typography.labelSmall,
+                                textAlign = TextAlign.End,
+                            )
+                        }
+                    }
+                    if (stats.byType.size > 4) {
+                        Text(
+                            "+${stats.byType.size - 4}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 4.dp, top = 2.dp),
                         )
-                        .padding(vertical = 6.dp, horizontal = 4.dp),
-                ) {
-                    Box(
-                        Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(type?.let { Color(it.color) } ?: MaterialTheme.colorScheme.outline),
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        type?.name ?: stringResource(R.string.stats_unknown_activity),
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        "$percent%",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.width(44.dp),
-                        textAlign = TextAlign.End,
-                    )
-                    Text(
-                        durationText(totalOf.ms),
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.width(72.dp),
-                        textAlign = TextAlign.End,
-                    )
+                    }
                 }
             }
         }
@@ -447,7 +528,7 @@ private fun BarCard(
             .sortedBy { (id, _) -> types[id]?.sortOrder ?: Long.MAX_VALUE }
             .filter { selectedType == null || it.first == selectedType }
             .map { (id, ms) ->
-                ChartSlice(id, ms.toFloat(), types[id]?.let { Color(it.color) } ?: MaterialTheme.colorScheme.outline)
+                ChartSlice(id, ms.toFloat(), types[id]?.let { accentColor(it.color) } ?: MaterialTheme.colorScheme.outline)
             }
         ChartBar(segments, bucketLabel(bucket, state.period, locale))
     }
@@ -457,7 +538,10 @@ private fun BarCard(
         StatsPeriod.YEAR -> R.string.stats_by_month
     }
 
-    Card(Modifier.fillMaxWidth()) {
+    Card(
+        Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(title), style = MaterialTheme.typography.titleSmall)
@@ -491,6 +575,200 @@ private fun BarCard(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonthHeatmapCard(
+    state: StatsState,
+    stats: TimeStats,
+    types: Map<Long, ActivityType>,
+    selectedDay: LocalDate?,
+    onSelectDay: (LocalDate?) -> Unit,
+    locale: java.util.Locale,
+) {
+    val selectedType = state.selectedType
+    val accent = selectedType?.let { types[it] }?.let { accentColor(it.color) } ?: MaterialTheme.colorScheme.primary
+    val emptyCell = MaterialTheme.colorScheme.surfaceContainerHigh
+    val values = stats.buckets.associate { bucket ->
+        bucket.date to if (selectedType == null) bucket.totalMs else bucket.perType[selectedType] ?: 0L
+    }
+    val max = values.values.maxOrNull() ?: 0L
+    fun levelOf(ms: Long): Int = when {
+        ms <= 0L || max <= 0L -> 0
+        ms * 4 <= max -> 1
+        ms * 2 <= max -> 2
+        ms * 4 <= max * 3 -> 3
+        else -> 4
+    }
+    val shades = floatArrayOf(0f, 0.32f, 0.55f, 0.78f, 1f)
+    fun shade(level: Int): Color = lerp(emptyCell, accent, shades[level])
+
+    val leading = (stats.range.start.dayOfWeek.value - state.firstDayOfWeek.value + 7) % 7
+    val days = stats.range.days
+    val weekRows = (leading + days + 6) / 7
+    val weekdayLabels = (0 until 7).map {
+        state.firstDayOfWeek.plus(it.toLong()).getDisplayName(TextStyle.NARROW, locale)
+    }
+    val cellHeight = 36.dp
+    val gap = 4.dp
+
+    Card(
+        Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.stats_by_day), style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.weight(1f))
+                if (selectedType != null) {
+                    Text(
+                        types[selectedType]?.name.orEmpty(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 110.dp),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                }
+                Text(
+                    stringResource(R.string.stats_heatmap_less),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(5.dp))
+                Box(
+                    Modifier
+                        .width(42.dp)
+                        .height(6.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    emptyCell,
+                                    lerp(emptyCell, accent, 0.35f),
+                                    lerp(emptyCell, accent, 0.7f),
+                                    accent,
+                                ),
+                            ),
+                        ),
+                )
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    stringResource(R.string.stats_heatmap_more),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                weekdayLabels.forEach { label ->
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+                repeat(weekRows) { row ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                        repeat(7) { column ->
+                            val index = row * 7 + column - leading
+                            if (index !in 0 until days) {
+                                Spacer(Modifier.weight(1f).height(cellHeight))
+                            } else {
+                                val date = stats.range.start.plusDays(index.toLong())
+                                val level = levelOf(values[date] ?: 0L)
+                                val selected = selectedDay == date
+                                val isToday = date == state.today
+                                val background by animateColorAsState(
+                                    targetValue = if (level == 0) emptyCell else shade(level),
+                                    animationSpec = tween(320),
+                                    label = "heatmapCell",
+                                )
+                                val cellScale by animateFloatAsState(
+                                    targetValue = if (selected) 1.05f else 1f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessMedium,
+                                    ),
+                                    label = "heatmapCellScale",
+                                )
+                                val shape = RoundedCornerShape(8.dp)
+                                Box(
+                                    Modifier
+                                        .weight(1f)
+                                        .height(cellHeight)
+                                        .scale(cellScale)
+                                        .clip(shape)
+                                        .background(background)
+                                        .then(
+                                            when {
+                                                selected -> Modifier.border(
+                                                    2.dp,
+                                                    MaterialTheme.colorScheme.primary,
+                                                    shape,
+                                                )
+                                                isToday -> Modifier.border(
+                                                    1.5.dp,
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
+                                                    shape,
+                                                )
+                                                else -> Modifier
+                                            },
+                                        )
+                                        .clickable { onSelectDay(if (selected) null else date) },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        date.dayOfMonth.toString(),
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isToday || selected) {
+                                            FontWeight.SemiBold
+                                        } else {
+                                            FontWeight.Normal
+                                        },
+                                        color = when {
+                                            level >= 3 -> accent.readableOn()
+                                            level == 0 -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val day = selectedDay
+                if (day != null) {
+                    Box(Modifier.size(6.dp).clip(CircleShape).background(accent))
+                    Spacer(Modifier.width(8.dp))
+                    Text(longDate(day, locale), style = MaterialTheme.typography.labelMedium)
+                    Spacer(Modifier.width(6.dp))
+                    Text("·", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        durationText(values[day] ?: 0L),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                } else {
+                    Text(
+                        stringResource(R.string.stats_heatmap_hint),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }

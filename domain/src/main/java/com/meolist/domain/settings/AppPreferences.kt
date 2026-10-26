@@ -3,6 +3,9 @@ package com.meolist.domain.settings
 import kotlinx.coroutines.flow.Flow
 import java.time.DayOfWeek
 
+/** How the monthly statistics view is drawn. */
+enum class MonthChartStyle { HEATMAP, BARS }
+
 data class AppSettings(
     /** Allow several activity timers to run at the same time. */
     val multipleTimers: Boolean = true,
@@ -15,6 +18,8 @@ data class AppSettings(
     val stopTimerOnTaskComplete: Boolean = true,
     /** Default time of day (minutes) for reminders on all-day items. */
     val defaultReminderMinute: Int = 9 * 60,
+    /** Chart used for the monthly statistics view. */
+    val monthChartStyle: MonthChartStyle = MonthChartStyle.HEATMAP,
 )
 
 interface AppPreferences {

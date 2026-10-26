@@ -9,6 +9,9 @@
     <string name="core_cancel">取消</string>
     <string name="core_clear">清除</string>
     <string name="core_save">保存</string>
+    <string name="core_discard_title">放弃修改？</string>
+    <string name="core_discard_text">未保存的修改将会丢失。</string>
+    <string name="core_discard">放弃</string>
     <string name="core_delete">删除</string>
     <string name="core_undo">撤销</string>
     <string name="core_more_options">更多选项</string>

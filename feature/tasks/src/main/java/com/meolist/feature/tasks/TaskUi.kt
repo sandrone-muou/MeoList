@@ -169,7 +169,7 @@ internal fun TaskRow(
                         val overdue = !task.isDone && due.toLocalDateTime(zone).toLocalDate() < today
                         MetaText(
                             dueLabel(due, task.allDay, today, zone),
-                            if (overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                            if (overdue) MaterialTheme.colorScheme.error else muted,
                         )
                     }
                     if (repeats || (hasReminder && !task.isDone)) {

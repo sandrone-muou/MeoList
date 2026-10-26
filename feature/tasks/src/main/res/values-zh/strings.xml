@@ -34,10 +34,17 @@
     <string name="tasks_delete_forever">永久删除</string>
     <string name="tasks_delete_forever_message">该任务及其子任务将被永久删除。</string>
     <string name="tasks_trash_empty">回收站是空的</string>
-    <string name="tasks_empty">这里还没有任务，点击 + 添加</string>
+    <string name="tasks_empty">这里还没有任务</string>
+    <string name="tasks_empty_hint">添加第一个任务，开始安排今天。</string>
+    <string name="tasks_completed_empty">还没有完成的任务</string>
+    <string name="tasks_completed_hint">勾选完成的任务会出现在这里。</string>
+    <string name="tasks_trash_hint">删除的任务会留在这里，直到清空回收站。</string>
+    <string name="tasks_new">新建任务</string>
     <string name="tasks_drawer_title">MeoList</string>
     <string name="tasks_drawer_lists">清单</string>
     <string name="tasks_drawer_tags">标签</string>
+    <string name="tasks_manage_empty_title">还没有清单或标签</string>
+    <string name="tasks_manage_empty_body">创建清单、文件夹和标签来整理任务。</string>
     <string name="tasks_manage_lists">管理清单和标签</string>
 
     <string name="tasks_add_hint">准备做什么？</string>
@@ -65,6 +72,7 @@
 
     <string name="tasks_search_hint">搜索任务</string>
     <string name="tasks_search_no_results">没有匹配的任务</string>
+    <string name="tasks_search_empty_body">换个关键词试试，或检查一下拼写。</string>
 
     <string name="tasks_new_list">新建清单</string>
     <string name="tasks_new_folder">新建文件夹</string>
@@ -155,11 +163,11 @@
     <string name="tasks_timer_list_default">设为该清单的默认活动</string>
     <string name="tasks_timer_new_type">新建活动</string>
     <string name="quadrant_title">四象限</string>
-    <string name="quadrant_hint">重要性由优先级决定；紧急指 %1$s 内到期。拖动任务只改变优先级，具体落在哪一行由到期日决定。</string>
-    <string name="quadrant_do">马上做</string>
+    <string name="quadrant_hint">重要性由优先级决定；%1$s内到期视为紧急。拖动任务只调整优先级，所在象限由优先级和到期日共同决定。</string>
+    <string name="quadrant_do">立即做</string>
     <string name="quadrant_schedule">计划做</string>
-    <string name="quadrant_delegate">授权做</string>
-    <string name="quadrant_later">有空再做</string>
+    <string name="quadrant_delegate">委派做</string>
+    <string name="quadrant_later">稍后再做</string>
     <string name="quadrant_empty">暂无任务</string>
     <plurals name="quadrant_urgent_window">
         <item quantity="other">%1$d 天</item>

@@ -1,5 +1,6 @@
 package com.meolist.feature.tasks.detail
 
+import com.meolist.core.ui.components.MeoScaffold
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -118,32 +119,24 @@ private fun TaskDetailScreen(
     val advance by vm.lastAdvance.collectAsStateWithLifecycle()
     RepeatAdvanceEffect(advance, snackbar, state.today, state.zone, onUndo = vm::undoRepeat, onConsumed = vm::consumeAdvance)
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbar) },
-        topBar = {
-            TopAppBar(
-                title = {},
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(com.meolist.core.R.string.core_back))
-                    }
-                },
-                actions = {
-                    if (task.isDeleted) {
-                        IconButton(onClick = { vm.restore() }) {
-                            Icon(Icons.Outlined.RestoreFromTrash, stringResource(R.string.tasks_restore))
-                        }
-                        IconButton(onClick = { confirmDeleteForever = true }) {
-                            Icon(Icons.Outlined.DeleteForever, stringResource(R.string.tasks_delete_forever))
-                        }
-                    } else {
-                        IconButton(onClick = { vm.moveToTrash(); onBack() }) {
-                            Icon(Icons.Outlined.Delete, stringResource(com.meolist.core.R.string.core_delete))
-                        }
-                    }
-                },
-            )
+    MeoScaffold(
+        title = "",
+        onBack = onBack,
+        actions = {
+            if (task.isDeleted) {
+                IconButton(onClick = { vm.restore() }) {
+                    Icon(Icons.Outlined.RestoreFromTrash, stringResource(R.string.tasks_restore))
+                }
+                IconButton(onClick = { confirmDeleteForever = true }) {
+                    Icon(Icons.Outlined.DeleteForever, stringResource(R.string.tasks_delete_forever))
+                }
+            } else {
+                IconButton(onClick = { vm.moveToTrash(); onBack() }) {
+                    Icon(Icons.Outlined.Delete, stringResource(com.meolist.core.R.string.core_delete))
+                }
+            }
         },
+        snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         Column(
             Modifier

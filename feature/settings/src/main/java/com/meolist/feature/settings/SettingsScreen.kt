@@ -1,5 +1,6 @@
 package com.meolist.feature.settings
 
+import com.meolist.core.ui.components.MeoScaffold
 import android.net.Uri
 import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -22,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Description
@@ -83,6 +85,7 @@ import com.meolist.core.ui.ReminderPermissionBanner
 import com.meolist.core.ui.currentLocale
 import com.meolist.core.ui.rememberReminderPermissionState
 import com.meolist.core.ui.timeLabel
+import com.meolist.domain.settings.MonthChartStyle
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -103,6 +106,7 @@ fun SettingsRoute(
     var pendingRestore by remember { mutableStateOf<Uri?>(null) }
 
     var choosingLanguage by remember { mutableStateOf(false) }
+    var choosingChartStyle by remember { mutableStateOf(false) }
     var choosingIgnore by remember { mutableStateOf(false) }
     var choosingUrgent by remember { mutableStateOf(false) }
     var choosingWeekStart by remember { mutableStateOf(false) }
@@ -148,21 +152,18 @@ fun SettingsRoute(
         vm.consumeEvent()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(com.meolist.core.R.string.core_back))
-                    }
-                },
-            )
-        },
+    MeoScaffold(
+        title = stringResource(R.string.settings_title),
+        onBack = onBack,
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         LazyColumn(
-            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 32.dp),
+            contentPadding = PaddingValues(
+                start = com.meolist.core.theme.Meo.spacing.screen,
+                end = com.meolist.core.theme.Meo.spacing.screen,
+                top = 4.dp,
+                bottom = 32.dp,
+            ),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.padding(padding).fillMaxSize(),
         ) {
@@ -183,6 +184,14 @@ fun SettingsRoute(
                         subtitle = stringResource(R.string.settings_language_desc),
                         value = languageLabel(language),
                         onClick = { choosingLanguage = true },
+                    )
+                    RowDivider()
+                    ChoiceRow(
+                        icon = Icons.Outlined.BarChart,
+                        title = stringResource(R.string.settings_month_chart),
+                        subtitle = stringResource(R.string.settings_month_chart_desc),
+                        value = chartStyleLabel(settings.monthChartStyle),
+                        onClick = { choosingChartStyle = true },
                     )
                 }
             }
@@ -313,6 +322,18 @@ fun SettingsRoute(
             onDismiss = { choosingLanguage = false },
         )
     }
+    if (choosingChartStyle) {
+        ChoiceDialog(
+            title = stringResource(R.string.settings_month_chart),
+            options = listOf(
+                MonthChartStyle.HEATMAP to stringResource(R.string.settings_chart_heatmap),
+                MonthChartStyle.BARS to stringResource(R.string.settings_chart_bars),
+            ),
+            selected = settings.monthChartStyle,
+            onSelect = { vm.setMonthChartStyle(it); choosingChartStyle = false },
+            onDismiss = { choosingChartStyle = false },
+        )
+    }
     if (choosingIgnore) {
         ChoiceDialog(
             title = stringResource(R.string.settings_ignore_short),
@@ -371,6 +392,11 @@ fun SettingsRoute(
 @Composable
 private fun languageLabel(language: AppLanguage): String = stringResource(
     if (language == AppLanguage.ZH) R.string.settings_language_zh else R.string.settings_language_en,
+)
+
+@Composable
+private fun chartStyleLabel(style: MonthChartStyle): String = stringResource(
+    if (style == MonthChartStyle.HEATMAP) R.string.settings_chart_heatmap else R.string.settings_chart_bars,
 )
 
 @Composable

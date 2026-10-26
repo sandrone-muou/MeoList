@@ -24,4 +24,7 @@
     <string name="stats_unknown_activity">Deleted activity</string>
     <string name="stats_pie_desc">Time per activity</string>
     <string name="stats_bar_desc">Tracked time chart</string>
+    <string name="stats_heatmap_hint">Tap a square to see that day.</string>
+    <string name="stats_heatmap_less">Less</string>
+    <string name="stats_heatmap_more">More</string>
 </resources>

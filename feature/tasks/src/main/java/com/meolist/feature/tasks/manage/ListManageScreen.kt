@@ -1,5 +1,7 @@
 package com.meolist.feature.tasks.manage
 
+import com.meolist.core.ui.components.EmptyState
+import com.meolist.core.ui.components.MeoScaffold
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,10 +10,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Tag
@@ -105,44 +108,55 @@ fun ListManageRoute(onBack: () -> Unit, vm: ListManageViewModel = hiltViewModel(
     var editing by remember { mutableStateOf<Editing?>(null) }
     var addMenu by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.tasks_manage_lists)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(com.meolist.core.R.string.core_back))
-                    }
-                },
-                actions = {
-                    Box {
-                        IconButton(onClick = { addMenu = true }) { Icon(Icons.Outlined.Add, stringResource(R.string.tasks_add)) }
-                        DropdownMenu(expanded = addMenu, onDismissRequest = { addMenu = false }) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.tasks_new_list)) },
-                                onClick = {
-                                    addMenu = false
-                                    editing = Editing.ListEdit(TaskList(name = "", color = MeoPalette.colors[state.lists.size % MeoPalette.colors.size]))
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.tasks_new_folder)) },
-                                onClick = { addMenu = false; editing = Editing.FolderEdit(ListFolder(name = "")) },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.tasks_new_tag)) },
-                                onClick = {
-                                    addMenu = false
-                                    editing = Editing.TagEdit(Tag(name = "", color = MeoPalette.colors[(state.tags.size + 3) % MeoPalette.colors.size]))
-                                },
-                            )
-                        }
-                    }
-                },
-            )
+    MeoScaffold(
+        title = stringResource(R.string.tasks_manage_lists),
+        onBack = onBack,
+        actions = {
+            Box {
+                IconButton(onClick = { addMenu = true }) { Icon(Icons.Outlined.Add, stringResource(R.string.tasks_add)) }
+                DropdownMenu(expanded = addMenu, onDismissRequest = { addMenu = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.tasks_new_list)) },
+                        onClick = {
+                            addMenu = false
+                            editing = Editing.ListEdit(TaskList(name = "", color = MeoPalette.colors[state.lists.size % MeoPalette.colors.size]))
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.tasks_new_folder)) },
+                        onClick = { addMenu = false; editing = Editing.FolderEdit(ListFolder(name = "")) },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.tasks_new_tag)) },
+                        onClick = {
+                            addMenu = false
+                            editing = Editing.TagEdit(Tag(name = "", color = MeoPalette.colors[(state.tags.size + 3) % MeoPalette.colors.size]))
+                        },
+                    )
+                }
+            }
         },
     ) { padding ->
-        LazyColumn(Modifier.padding(padding).fillMaxSize()) {
+        LazyColumn(
+            contentPadding = PaddingValues(
+                horizontal = com.meolist.core.theme.Meo.spacing.xs,
+                vertical = com.meolist.core.theme.Meo.spacing.xs,
+            ),
+            modifier = Modifier.padding(padding).fillMaxSize(),
+        ) {
+            val allEmpty = state.lists.isEmpty() && state.folders.isEmpty() && state.tags.isEmpty()
+            if (allEmpty) {
+                item {
+                    EmptyState(
+                        icon = Icons.AutoMirrored.Outlined.List,
+                        title = stringResource(R.string.tasks_manage_empty_title),
+                        body = stringResource(R.string.tasks_manage_empty_body),
+                        primary = stringResource(R.string.tasks_new_list) to { addMenu = true },
+                        modifier = Modifier.padding(top = 48.dp),
+                    )
+                }
+                return@LazyColumn
+            }
             item { Header(stringResource(R.string.tasks_drawer_lists)) }
             if (state.lists.isEmpty()) item { Hint(stringResource(R.string.tasks_no_lists)) }
             items(state.lists, key = { "l${it.id}" }) { list ->

@@ -6,6 +6,10 @@
     <string name="settings_language_desc">Language used for the app interface.</string>
     <string name="settings_language_zh">中文</string>
     <string name="settings_language_en">English</string>
+    <string name="settings_month_chart">Month view chart</string>
+    <string name="settings_month_chart_desc">Heatmap shows daily intensity; bars show daily duration.</string>
+    <string name="settings_chart_heatmap">Heatmap</string>
+    <string name="settings_chart_bars">Bars</string>
     <string name="settings_section_timing">Timing</string>
     <string name="settings_multiple_timers">Allow parallel timers</string>
     <string name="settings_multiple_timers_desc">Run several activities at the same time.</string>

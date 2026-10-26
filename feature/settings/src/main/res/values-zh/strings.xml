@@ -6,6 +6,10 @@
     <string name="settings_language_desc">应用界面使用的语言。</string>
     <string name="settings_language_zh">中文</string>
     <string name="settings_language_en">English</string>
+    <string name="settings_month_chart">月视图图表</string>
+    <string name="settings_month_chart_desc">热力图显示每天的活动强度，直方图显示每天时长。</string>
+    <string name="settings_chart_heatmap">热力图</string>
+    <string name="settings_chart_bars">直方图</string>
     <string name="settings_section_timing">计时</string>
     <string name="settings_multiple_timers">允许同时计时</string>
     <string name="settings_multiple_timers_desc">多个活动可以同时运行。</string>

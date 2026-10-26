@@ -20,14 +20,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -37,10 +35,8 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +59,8 @@ import com.meolist.core.ui.ActivityIcons
 import com.meolist.core.ui.ConfirmDialog
 import com.meolist.core.ui.MeoDatePickerDialog
 import com.meolist.core.ui.MeoTimePickerDialog
+import com.meolist.core.ui.components.MeoScaffold
+import com.meolist.core.ui.components.rememberBackGuard
 import com.meolist.core.ui.durationText
 import com.meolist.core.ui.longDate
 import com.meolist.core.ui.timeLabel
@@ -94,6 +92,14 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+data class RecordDraft(
+    val typeId: Long,
+    val startAt: Long,
+    val endAt: Long,
+    val taskId: Long?,
+    val comment: String,
+)
+
 data class RecordEditState(
     val loaded: Boolean = false,
     val isNew: Boolean = true,
@@ -106,8 +112,11 @@ data class RecordEditState(
     val comment: String = "",
     val types: List<ActivityType> = emptyList(),
     val problem: RecordProblem? = null,
+    /** Snapshot once the activity list is known; any difference means unsaved edits. */
+    val original: RecordDraft? = null,
 ) {
     val durationMs: Long get() = (endAt - startAt).coerceAtLeast(0)
+    val draft: RecordDraft get() = RecordDraft(typeId, startAt, endAt, taskId, comment)
 }
 
 @HiltViewModel
@@ -143,7 +152,7 @@ class RecordEditViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            _form.value = if (recordId != 0L) existingRecord() else blankRecord()
+            _form.value = (if (recordId != 0L) existingRecord() else blankRecord()).captureOriginal()
         }
         viewModelScope.launch {
             types.observeTypes().collect { all ->
@@ -157,10 +166,13 @@ class RecordEditViewModel @Inject constructor(
                             else -> all.firstOrNull { !it.archived }?.id ?: 0
                         },
                     )
-                }
+                }.captureOriginal()
             }
         }
     }
+
+    private fun RecordEditState.captureOriginal(): RecordEditState =
+        if (original == null && loaded && types.isNotEmpty()) copy(original = draft) else this
 
     private suspend fun existingRecord(): RecordEditState {
         val record = records.getRecord(recordId) ?: return _form.value.copy(loaded = true, isNew = false)
@@ -281,26 +293,21 @@ fun RecordEditRoute(
     val start = state.startAt.toLocalDateTime(zone)
     val end = state.endAt.toLocalDateTime(zone)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(if (state.isNew) R.string.tracker_record_new else R.string.tracker_record_edit)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(com.meolist.core.R.string.core_back))
-                    }
-                },
-                actions = {
-                    if (!state.isNew) {
-                        IconButton(onClick = { confirmDelete = true }) {
-                            Icon(Icons.Outlined.DeleteOutline, stringResource(com.meolist.core.R.string.core_delete))
-                        }
-                    }
-                    IconButton(onClick = { vm.save(onBack) }, enabled = state.loaded) {
-                        Icon(Icons.Outlined.Check, stringResource(com.meolist.core.R.string.core_save))
-                    }
-                },
-            )
+    val dirty = state.original != null && state.draft != state.original
+    val guard = rememberBackGuard(dirty = dirty, onBack = onBack)
+
+    MeoScaffold(
+        title = stringResource(if (state.isNew) R.string.tracker_record_new else R.string.tracker_record_edit),
+        onBack = guard.request,
+        actions = {
+            if (!state.isNew) {
+                IconButton(onClick = { confirmDelete = true }) {
+                    Icon(Icons.Outlined.DeleteOutline, stringResource(com.meolist.core.R.string.core_delete))
+                }
+            }
+            IconButton(onClick = { vm.save(onBack) }, enabled = state.loaded) {
+                Icon(Icons.Outlined.Check, stringResource(com.meolist.core.R.string.core_save))
+            }
         },
     ) { padding ->
         Column(
@@ -308,7 +315,10 @@ fun RecordEditRoute(
                 .padding(padding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(
+                    horizontal = com.meolist.core.theme.Meo.spacing.screen,
+                    vertical = 8.dp,
+                ),
         ) {
             SectionLabel(stringResource(R.string.tracker_record_activity))
             if (state.types.none { !it.archived } && state.typeId == 0L) {
@@ -420,11 +430,7 @@ fun RecordEditRoute(
                 )
             }
 
-            Button(
-                onClick = { vm.save(onBack) },
-                enabled = state.loaded,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-            ) { Text(stringResource(com.meolist.core.R.string.core_save)) }
+            Spacer(Modifier.height(24.dp))
         }
     }
 
