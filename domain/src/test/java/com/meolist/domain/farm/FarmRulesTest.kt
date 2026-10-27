@@ -170,4 +170,12 @@ class FarmRulesTest {
         assertEquals(2, metrics.harvested(Crop.CARROT))
         assertEquals(1, metrics.of(AchievementMetric.CROPS_HARVESTED))
     }
+
+    @Test
+    fun legacyHarvestRecordsKeepTheirRawValueButReadCapped() {
+        val legacy = HarvestRecord(crop = Crop.CARROT, plotId = 1, harvestedAt = 0, nutrients = 199)
+
+        assertEquals(199, legacy.nutrients)
+        assertEquals(Crop.CARROT.need, legacy.absorbedNutrients)
+    }
 }

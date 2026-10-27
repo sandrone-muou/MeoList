@@ -55,6 +55,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -424,86 +425,128 @@ private fun PieCard(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.fillMaxWidth(0.42f), contentAlignment = Alignment.Center) {
-                    DonutChart(
-                        slices = slices,
-                        selectedKey = state.selectedType,
-                        onSelect = vm::selectType,
-                        description = stringResource(R.string.stats_pie_desc),
-                        thickness = 20.dp,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                durationText(total),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Text(
-                                stringResource(R.string.stats_total),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-                Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    stats.byType.take(4).forEach { totalOf ->
-                        val type = types[totalOf.typeId]
-                        val percent = (totalOf.ms * 100.0 / total).roundToInt()
-                        val selected = state.selectedType == totalOf.typeId
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(MaterialTheme.shapes.small)
-                                .clickable { vm.selectType(totalOf.typeId) }
-                                .background(
-                                    if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
-                                )
-                                .padding(horizontal = 4.dp, vertical = 3.dp),
-                        ) {
-                            Box(
-                                Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(type?.let { accentColor(it.color) } ?: MaterialTheme.colorScheme.outline),
-                            )
-                            Spacer(Modifier.width(7.dp))
-                            Text(
-                                type?.name ?: stringResource(R.string.stats_unknown_activity),
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Text(
-                                "$percent%",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.width(34.dp),
-                                textAlign = TextAlign.End,
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                durationText(totalOf.ms),
-                                style = MaterialTheme.typography.labelSmall,
-                                textAlign = TextAlign.End,
-                            )
-                        }
-                    }
-                    if (stats.byType.size > 4) {
-                        Text(
-                            "+${stats.byType.size - 4}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 4.dp, top = 2.dp),
-                        )
-                    }
+            val center: @Composable () -> Unit = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        durationText(total),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                    Text(
+                        stringResource(R.string.stats_total),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
+            if (LocalDensity.current.fontScale > 1.15f) {
+                // A large system font leaves too little room beside the ring for both the total
+                // and the legend, so stack them instead of squeezing the labels.
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.fillMaxWidth(0.52f), contentAlignment = Alignment.Center) {
+                        DonutChart(
+                            slices = slices,
+                            selectedKey = state.selectedType,
+                            onSelect = vm::selectType,
+                            description = stringResource(R.string.stats_pie_desc),
+                            thickness = 20.dp,
+                            modifier = Modifier.fillMaxWidth(),
+                            center = center,
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    ActivityLegend(
+                        stats = stats,
+                        types = types,
+                        selectedType = state.selectedType,
+                        onSelect = vm::selectType,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.fillMaxWidth(0.42f), contentAlignment = Alignment.Center) {
+                        DonutChart(
+                            slices = slices,
+                            selectedKey = state.selectedType,
+                            onSelect = vm::selectType,
+                            description = stringResource(R.string.stats_pie_desc),
+                            thickness = 20.dp,
+                            modifier = Modifier.fillMaxWidth(),
+                            center = center,
+                        )
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    ActivityLegend(
+                        stats = stats,
+                        types = types,
+                        selectedType = state.selectedType,
+                        onSelect = vm::selectType,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActivityLegend(
+    stats: TimeStats,
+    types: Map<Long, ActivityType>,
+    selectedType: Long?,
+    onSelect: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        stats.byType.take(4).forEach { totalOf ->
+            val type = types[totalOf.typeId]
+            val percent = (totalOf.ms * 100.0 / stats.totalMs).roundToInt()
+            val selected = selectedType == totalOf.typeId
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable { onSelect(totalOf.typeId) }
+                    .background(
+                        if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
+                    )
+                    .padding(horizontal = 4.dp, vertical = 3.dp),
+            ) {
+                Box(
+                    Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(type?.let { accentColor(it.color) } ?: MaterialTheme.colorScheme.outline),
+                )
+                Spacer(Modifier.width(7.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        type?.name ?: stringResource(R.string.stats_unknown_activity),
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        "$percent% · ${durationText(totalOf.ms)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+        if (stats.byType.size > 4) {
+            Text(
+                "+${stats.byType.size - 4}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp, top = 2.dp),
+            )
         }
     }
 }
@@ -825,6 +868,7 @@ private fun bucketLabel(bucket: StatsBucket, period: StatsPeriod, locale: java.u
     val hour = bucket.hour
     return when {
         hour != null -> if (hour % 3 == 0) hour.toString() else null
+        period == StatsPeriod.WEEK -> bucket.date.dayOfMonth.toString()
         period == StatsPeriod.YEAR ->
             if (bucket.date.monthValue % 2 == 1) bucket.date.month.getDisplayName(TextStyle.SHORT, locale) else null
         else -> {

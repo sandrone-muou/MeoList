@@ -11,6 +11,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -322,6 +324,7 @@ fun FarmRoute(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FarmScene(
     snapshot: FarmSnapshot,
@@ -348,9 +351,9 @@ private fun FarmScene(
         ) {
             FarmBackdrop(Modifier.matchParentSize())
             Column(Modifier.fillMaxWidth().padding(Meo.spacing.lg)) {
-                Row(
+                FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalArrangement = Arrangement.spacedBy(Meo.spacing.xs),
                 ) {
                     StatChip(
                         icon = Icons.Outlined.Grass,
@@ -508,7 +511,7 @@ private fun PlotTile(
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    stringResource(R.string.farm_slot_locked_harvests, lockedNeeded),
+                    stringResource(R.string.farm_slot_locked_short, lockedNeeded),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -707,7 +710,7 @@ private fun HarvestList(harvests: List<HarvestRecord>) {
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    stringResource(R.string.farm_harvest_nutrients, harvest.nutrients),
+                    stringResource(R.string.farm_harvest_nutrients, harvest.absorbedNutrients),
                     style = MaterialTheme.typography.labelLarge,
                     color = Meo.colors.success,
                 )
@@ -878,6 +881,7 @@ private fun PlotSheet(
     onDismiss: () -> Unit,
 ) {
     val mature = growth >= plot.crop.need
+    val shownGrowth = growth.coerceAtMost(plot.crop.need)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -923,7 +927,7 @@ private fun PlotSheet(
                     )
                     Spacer(Modifier.height(Meo.spacing.sm))
                     CropGrowthBar(
-                        progress = growth.toFloat() / plot.crop.need,
+                        progress = shownGrowth.toFloat() / plot.crop.need,
                         height = 12.dp,
                         color = if (mature) Meo.colors.success else MaterialTheme.colorScheme.primary,
                     )
@@ -932,7 +936,7 @@ private fun PlotSheet(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            stringResource(R.string.farm_plot_growth, growth, plot.crop.need),
+                            stringResource(R.string.farm_plot_growth, shownGrowth, plot.crop.need),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -1019,7 +1023,7 @@ private fun HarvestDialog(record: HarvestRecord, onDismiss: () -> Unit) {
                 stringResource(
                     R.string.farm_harvest_dialog_text,
                     cropName(record.crop),
-                    record.nutrients,
+                    record.absorbedNutrients,
                 ),
                 textAlign = TextAlign.Center,
             )

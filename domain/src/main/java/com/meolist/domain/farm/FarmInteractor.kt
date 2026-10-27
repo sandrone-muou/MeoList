@@ -138,7 +138,8 @@ class FarmInteractor @Inject constructor(
             crop = plot.crop,
             plotId = plot.id,
             harvestedAt = now,
-            nutrients = growth,
+            // A crop consumes exactly its requirement; a final entry may overshoot it.
+            nutrients = minOf(growth, plot.crop.need),
         )
         val id = tx.run {
             farm.updatePlot(plot.copy(harvestedAt = now))

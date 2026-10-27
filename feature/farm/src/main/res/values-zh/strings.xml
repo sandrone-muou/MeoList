@@ -11,6 +11,7 @@
     <string name="farm_plots_count">已开垦 %1$d / %2$d 块</string>
     <string name="farm_slot_empty">种下作物</string>
     <string name="farm_slot_locked_harvests">收获 %1$d 次解锁</string>
+    <string name="farm_slot_locked_short">收获 %1$d 次</string>
     <string name="farm_plot_growth">%1$d / %2$d</string>
     <string name="farm_plot_harvest">收获</string>
     <string name="farm_plot_compost">施肥</string>
@@ -19,7 +20,7 @@
     <string name="farm_compost_amount">%1$d 养分</string>
     <string name="farm_tip">专注计时、完成任务、习惯打卡和达成活动目标都会变成养分。</string>
     <string name="farm_harvest_dialog_title">丰收！</string>
-    <string name="farm_harvest_dialog_text">%1$s带来了 %2$d 养分。</string>
+    <string name="farm_harvest_dialog_text">已收获%1$s，本株累计吸收 %2$d 养分。</string>
     <string name="farm_harvests_title">最近收获</string>
     <string name="farm_no_harvests">还没有收获。先用专注浇灌一株作物吧。</string>
     <string name="farm_plant_title">选择作物</string>
@@ -53,7 +54,7 @@
     <string name="farm_slot_ready">可收获</string>
     <string name="farm_crops_title">选择作物</string>
     <string name="farm_crop_level">需要 %1$d</string>
-    <string name="farm_harvest_nutrients">+%1$d 养分</string>
+    <string name="farm_harvest_nutrients">累计 %1$d 养分</string>
     <string name="farm_chip_harvests">收获</string>
     <string name="farm_chip_focus">专注</string>
     <string name="farm_chip_streak">连续</string>

@@ -157,6 +157,19 @@ class FarmInteractorTest {
     }
 
     @Test
+    fun harvestCapsRewardAtCropRequirement() = runTest {
+        val plotId = addPlot(0)
+        addRecord(9, 199)
+        interactor.sync()
+        assertTrue(FarmRules.growth(farm.getPlots().first { it.id == plotId }, farm.getNutrients()) > Crop.CARROT.need)
+
+        val harvested = interactor.harvest(plotId)
+
+        assertTrue(harvested is HarvestResult.Harvested)
+        assertEquals(Crop.CARROT.need, (harvested as HarvestResult.Harvested).record.nutrients)
+    }
+
+    @Test
     fun plantingChecksSlotLimitOccupancyAndCropUnlocks() = runTest {
         assertTrue(interactor.plant(3, Crop.CARROT) is PlantResult.SlotLocked)
         assertTrue(interactor.plant(0, Crop.TOMATO) is PlantResult.CropLocked)

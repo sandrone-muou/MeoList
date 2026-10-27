@@ -11,6 +11,7 @@
     <string name="farm_plots_count">%1$d of %2$d plots</string>
     <string name="farm_slot_empty">Plant a crop</string>
     <string name="farm_slot_locked_harvests">Harvest %1$d crops to unlock</string>
+    <string name="farm_slot_locked_short">%1$d harvests</string>
     <string name="farm_plot_growth">%1$d / %2$d</string>
     <string name="farm_plot_harvest">Harvest</string>
     <string name="farm_plot_compost">Fertilize</string>
@@ -19,7 +20,7 @@
     <string name="farm_compost_amount">%1$d nutrients</string>
     <string name="farm_tip">Focus time, completed tasks, check-ins and activity goals all become nutrients.</string>
     <string name="farm_harvest_dialog_title">Harvest!</string>
-    <string name="farm_harvest_dialog_text">%1$s brought %2$d nutrients.</string>
+    <string name="farm_harvest_dialog_text">Harvested %1$s. It absorbed %2$d nutrients in total.</string>
     <string name="farm_harvests_title">Recent harvests</string>
     <string name="farm_no_harvests">Nothing harvested yet. Give a crop some focus.</string>
     <string name="farm_plant_title">Choose a crop</string>
@@ -53,7 +54,7 @@
     <string name="farm_slot_ready">Ready</string>
     <string name="farm_crops_title">Choose a crop</string>
     <string name="farm_crop_level">Needs %1$d</string>
-    <string name="farm_harvest_nutrients">+%1$d nutrients</string>
+    <string name="farm_harvest_nutrients">%1$d nutrients used</string>
     <string name="farm_chip_harvests">Harvests</string>
     <string name="farm_chip_focus">Focus</string>
     <string name="farm_chip_streak">Streak</string>

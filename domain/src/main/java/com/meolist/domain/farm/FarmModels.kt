@@ -65,7 +65,10 @@ data class HarvestRecord(
     val plotId: Long,
     val harvestedAt: Long,
     val nutrients: Int,
-)
+) {
+    /** Older rows may exceed the crop's need; the UI shows what the crop could absorb. */
+    val absorbedNutrients: Int get() = minOf(nutrients, crop.need)
+}
 
 enum class AchievementMetric { HARVESTS, FOCUS_MINUTES, TASKS_DONE, BEST_STREAK, GOALS_REACHED, CROPS_HARVESTED }
 
