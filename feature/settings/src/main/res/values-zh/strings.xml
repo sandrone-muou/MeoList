@@ -3,7 +3,9 @@
     <string name="settings_title">设置</string>
     <string name="settings_section_appearance">显示</string>
     <string name="settings_language">语言</string>
-    <string name="settings_language_desc">应用界面使用的语言。</string>
+    <string name="settings_language_desc">跟随系统，不支持时回退 English。</string>
+    <string name="settings_language_system">跟随系统</string>
+    <string name="settings_language_system_short">系统</string>
     <string name="settings_language_zh">中文</string>
     <string name="settings_language_en">English</string>
     <string name="settings_month_chart">月视图图表</string>

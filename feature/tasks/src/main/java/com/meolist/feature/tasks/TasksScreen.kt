@@ -219,6 +219,7 @@ private fun TasksScreen(
         QuickAddSheet(
             defaults = remember { quickAddDefaults() },
             lists = state.lists.filter { !it.archived },
+            tags = state.tags,
             today = state.today,
             onAdd = onAdd,
             onDismiss = { showQuickAdd = false },

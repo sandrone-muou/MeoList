@@ -1,5 +1,6 @@
 package com.meolist.domain.settings
 
+import com.meolist.domain.task.Quadrant
 import kotlinx.coroutines.flow.Flow
 import java.time.DayOfWeek
 
@@ -20,6 +21,8 @@ data class AppSettings(
     val defaultReminderMinute: Int = 9 * 60,
     /** Chart used for the monthly statistics view. */
     val monthChartStyle: MonthChartStyle = MonthChartStyle.HEATMAP,
+    /** Optional tag per quadrant; tagged tasks take precedence over the date/priority fallback. */
+    val quadrantTags: Map<Quadrant, Long> = emptyMap(),
 )
 
 interface AppPreferences {

@@ -6,11 +6,13 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.meolist.domain.settings.AppPreferences
 import com.meolist.domain.settings.AppSettings
 import com.meolist.domain.settings.MonthChartStyle
+import com.meolist.domain.task.Quadrant
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -37,6 +39,12 @@ class DataStoreAppPreferences @Inject constructor(
         val defaultReminderMinute = intPreferencesKey("default_reminder_minute")
         val monthChartStyle = stringPreferencesKey("month_chart_style")
         val lastTaskFilter = stringPreferencesKey("last_task_filter")
+        val quadrantTags = mapOf(
+            Quadrant.URGENT_IMPORTANT to longPreferencesKey("quadrant_tag_urgent_important"),
+            Quadrant.NOT_URGENT_IMPORTANT to longPreferencesKey("quadrant_tag_not_urgent_important"),
+            Quadrant.URGENT_NOT_IMPORTANT to longPreferencesKey("quadrant_tag_urgent_not_important"),
+            Quadrant.NOT_URGENT_NOT_IMPORTANT to longPreferencesKey("quadrant_tag_not_urgent_not_important"),
+        )
     }
 
     override val settings: Flow<AppSettings> = store.data.map { it.toSettings() }.distinctUntilChanged()
@@ -51,6 +59,10 @@ class DataStoreAppPreferences @Inject constructor(
             prefs[Keys.stopTimerOnTaskComplete] = next.stopTimerOnTaskComplete
             prefs[Keys.defaultReminderMinute] = next.defaultReminderMinute
             prefs[Keys.monthChartStyle] = next.monthChartStyle.name
+            Keys.quadrantTags.forEach { (quadrant, key) ->
+                val tagId = next.quadrantTags[quadrant]
+                if (tagId != null) prefs[key] = tagId else prefs.remove(key)
+            }
         }
     }
 
@@ -72,6 +84,9 @@ class DataStoreAppPreferences @Inject constructor(
             defaultReminderMinute = this[Keys.defaultReminderMinute] ?: defaults.defaultReminderMinute,
             monthChartStyle = this[Keys.monthChartStyle]?.let { runCatching { MonthChartStyle.valueOf(it) }.getOrNull() }
                 ?: defaults.monthChartStyle,
+            quadrantTags = Keys.quadrantTags.mapNotNull { (quadrant, key) ->
+                this[key]?.let { quadrant to it }
+            }.toMap(),
         )
     }
 }

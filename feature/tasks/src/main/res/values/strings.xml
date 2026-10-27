@@ -140,7 +140,10 @@
     <string name="tasks_reminder_days_before">%1$s before at %2$s</string>
     <string name="tasks_reminder_needs_due">Set a due date first</string>
     <string name="tasks_reminder_count">%1$d reminders</string>
+    <string name="tasks_reminder_off">No reminder</string>
+    <string name="tasks_reminder_due_context">Due %1$s · all-day</string>
     <string name="tasks_reminder_custom">Custom…</string>
+    <string name="tasks_reminder_add">Add reminder</string>
     <string name="tasks_reminder_days_early">Days before</string>
     <string name="tasks_reminder_at_time">Time</string>
     <string name="tasks_reminder_how_early">How early</string>
@@ -167,14 +170,31 @@
     <string name="tasks_timer_list_default">Use for this list by default</string>
     <string name="tasks_timer_new_type">New activity</string>
     <string name="quadrant_title">Four quadrants</string>
-    <string name="quadrant_hint">Importance comes from priority; anything due within %1$s counts as urgent. Dragging changes priority only; the quadrant follows priority and due date.</string>
-    <string name="quadrant_do">Do now</string>
-    <string name="quadrant_schedule">Schedule</string>
-    <string name="quadrant_delegate">Delegate</string>
-    <string name="quadrant_later">Later</string>
+    <string name="quadrant_hint">Tasks with a quadrant\'s tag are placed there. Everything else follows priority and anything due within %1$s counts as urgent.</string>
+    <string name="quadrant_do">Urgent &amp; important</string>
+    <string name="quadrant_schedule">Important, not urgent</string>
+    <string name="quadrant_delegate">Urgent, not important</string>
+    <string name="quadrant_later">Not urgent or important</string>
     <string name="quadrant_empty">Nothing here</string>
+    <string name="quadrant_auto_tag">Automatic</string>
+    <string name="quadrant_tags_title">Quadrant tags</string>
+    <string name="quadrant_tags_desc">Bind one tag to a quadrant to place its tasks there. Dragging a task moves it by swapping its quadrant tag.</string>
+    <string name="quadrant_tags_no_tags">No tags yet. Create them under Manage lists &amp; tags.</string>
+    <string name="quadrant_tag_none">Not set (automatic)</string>
+    <string name="quadrant_tag_required">Set a tag for this quadrant first.</string>
+    <string name="quadrant_tag_configure">Set up</string>
     <plurals name="quadrant_urgent_window">
         <item quantity="one">%1$d day</item>
         <item quantity="other">%1$d days</item>
     </plurals>
+
+    <string name="schedule_tab_date">Date</string>
+    <string name="schedule_tab_time">Time</string>
+    <string name="schedule_next_monday">Next Monday</string>
+    <string name="schedule_this_afternoon">This afternoon</string>
+    <string name="schedule_all_day">All-day</string>
+    <string name="schedule_all_day_hint">No specific time</string>
+    <string name="schedule_due_time_hint">Due time</string>
+    <string name="schedule_no_date">No date</string>
+    <string name="tasks_reminder_due_context_timed">Due %1$s at %2$s</string>
 </resources>

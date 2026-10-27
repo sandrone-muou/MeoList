@@ -14,12 +14,12 @@ focus time. Everything stays on the device.
 
 ## Features
 
-- **Tasks**: lists / folders, subtasks, priorities, tags, due dates, recurring tasks, reminders when creating a task, search, trash
+- **Tasks**: lists / folders, subtasks, priorities, tags, due dates, recurring tasks, custom reminders when creating a task, search, trash
 - **Activity timing**: custom activity types, one-tap start / stop, several timers at once, task linking, daily / weekly / monthly duration goals
 - **Habits**: every day / selected weekdays / N times a week, streaks, weekly progress and a check-in calendar
 - **Countdowns**: count down or up, optional yearly repeat
 - **Statistics**: day / week / month / year views; month view switches between heatmap and bars; tracked time and completed tasks, with editable records
-- **Calendar + quadrants**: month / week views; the agenda separates tasks, habits, countdowns and timer records; quadrants classify tasks by importance / urgency
+- **Calendar + quadrants**: month / week views; the agenda separates tasks, habits, countdowns and timer records; tag-bound quadrants place tasks by tag, with priority / due-date classification for untagged tasks
 - **Timing farm**: focus time, completed tasks and habit check-ins become nutrients that grow crops, unlock harvests and achievements
 - **Data**: local-only storage; JSON backup / restore and CSV export; timing, reminder, week-start and month-chart preferences
 
@@ -31,9 +31,10 @@ JSON backup before switching devices or uninstalling.
 
 ## Language
 
-The app starts in Simplified Chinese. Switch to English under **More → Settings → Appearance → Language**;
-the change applies immediately and is kept. Reminders and timer notifications follow the same setting.
-Your task, habit and note text is never translated.
+The app follows your system language: Simplified Chinese and English are supported, and any other
+system language falls back to English. You can override the choice under
+**More → Settings → Appearance → Language**; the change applies immediately and is kept. Reminders
+and timer notifications follow the same setting. Your task, habit and note text is never translated.
 The month chart style is under **More → Settings → Appearance → Month view chart**.
 
 ## Build and test

@@ -164,7 +164,7 @@ class TasksViewModel @Inject constructor(
         priority: Priority,
         listId: Long?,
         tagIds: Set<Long>,
-        reminderDaysBefore: Int?,
+        reminder: Reminder?,
     ) {
         if (title.isBlank()) return
         val zone = clock.zone()
@@ -178,15 +178,15 @@ class TasksViewModel @Inject constructor(
                 priority = priority,
                 tagIds = tagIds,
             )
-            if (reminderDaysBefore != null && dueAt != null) {
+            if (reminder != null && dueAt != null) {
                 interactor.setReminders(
                     id,
                     listOf(
-                        Reminder(
+                        reminder.copy(
                             ownerType = ReminderOwner.TASK,
                             ownerId = id,
-                            offsetMin = reminderDaysBefore * Reminder.DAY_MINUTES,
-                            minuteOfDay = Reminder.DEFAULT_MINUTE_OF_DAY,
+                            nextFireAt = null,
+                            snoozedUntil = null,
                         ),
                     ),
                 )

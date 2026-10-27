@@ -102,7 +102,7 @@ fun SettingsRoute(
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     val permissions = rememberReminderPermissionState()
-    val language = LanguageStore.current(context)
+    val languageChoice = LanguageStore.selected(context)
     var pendingRestore by remember { mutableStateOf<Uri?>(null) }
 
     var choosingLanguage by remember { mutableStateOf(false) }
@@ -182,7 +182,7 @@ fun SettingsRoute(
                         icon = Icons.Outlined.Language,
                         title = stringResource(R.string.settings_language),
                         subtitle = stringResource(R.string.settings_language_desc),
-                        value = languageLabel(language),
+                        value = languageLabel(languageChoice),
                         onClick = { choosingLanguage = true },
                     )
                     RowDivider()
@@ -307,14 +307,15 @@ fun SettingsRoute(
     if (choosingLanguage) {
         ChoiceDialog(
             title = stringResource(R.string.settings_language),
-            options = listOf(
+            options = listOf<Pair<AppLanguage?, String>>(
+                null to stringResource(R.string.settings_language_system),
                 AppLanguage.ZH to stringResource(R.string.settings_language_zh),
                 AppLanguage.EN to stringResource(R.string.settings_language_en),
             ),
-            selected = language,
+            selected = languageChoice,
             onSelect = { chosen ->
                 choosingLanguage = false
-                if (chosen != language) {
+                if (chosen != languageChoice) {
                     LanguageStore.save(context, chosen)
                     context.findActivity()?.recreate()
                 }
@@ -390,8 +391,12 @@ fun SettingsRoute(
 }
 
 @Composable
-private fun languageLabel(language: AppLanguage): String = stringResource(
-    if (language == AppLanguage.ZH) R.string.settings_language_zh else R.string.settings_language_en,
+private fun languageLabel(language: AppLanguage?): String = stringResource(
+    when (language) {
+        null -> R.string.settings_language_system_short
+        AppLanguage.ZH -> R.string.settings_language_zh
+        AppLanguage.EN -> R.string.settings_language_en
+    },
 )
 
 @Composable

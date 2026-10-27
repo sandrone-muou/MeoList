@@ -1,5 +1,6 @@
 package com.meolist.feature.tasks.detail
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,32 +10,47 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Alarm
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
@@ -44,6 +60,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -452,143 +471,278 @@ internal fun ReminderRow(task: Task, reminders: List<Reminder>, editable: Boolea
 }
 
 @Composable
+internal fun ReminderOptionRow(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (selected) MaterialTheme.colorScheme.surfaceContainerLowest
+                else Color.Transparent,
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+    ) {
+        Icon(
+            icon,
+            null,
+            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
+        if (trailing != null) {
+            trailing()
+        } else if (selected) {
+            Icon(Icons.Outlined.Check, null, tint = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
 private fun ReminderDialog(task: Task, initial: List<Reminder>, onConfirm: (List<Reminder>) -> Unit, onDismiss: () -> Unit) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val presets = if (task.allDay) allDayPresets(task.id) else timedPresets(task.id)
     // Options = presets plus any custom reminders already set, in a stable order.
     var options by remember {
         mutableStateOf((presets + initial.filter { r -> presets.none { it.sameSetting(r) } }).sortedWith(reminderOrder))
     }
     var selected by remember { mutableStateOf(options.filter { o -> initial.any { it.sameSetting(o) } }) }
-    var custom by remember { mutableStateOf(false) }
+    var customOpen by remember { mutableStateOf(false) }
+    var customDays by remember { mutableIntStateOf(0) }
+    var customMinute by remember { mutableIntStateOf(Reminder.DEFAULT_MINUTE_OF_DAY) }
+    var customAmount by remember { mutableStateOf("10") }
+    var customUnit by remember { mutableStateOf(OffsetUnit.MINUTES) }
+    var pickTime by remember { mutableStateOf(false) }
+    val amount = customAmount.toIntOrNull()
+    val customReminder = if (task.allDay) {
+        Reminder(
+            ownerType = ReminderOwner.TASK,
+            ownerId = task.id,
+            kind = ReminderKind.RELATIVE,
+            offsetMin = customDays * DAY,
+            minuteOfDay = customMinute,
+        )
+    } else {
+        amount?.takeIf { it in 0..999 }?.let {
+            Reminder(ownerType = ReminderOwner.TASK, ownerId = task.id, offsetMin = it * customUnit.minutes)
+        }
+    }
 
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.tasks_reminders)) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                options.forEach { option ->
-                    val checked = selected.any { it.sameSetting(option) }
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                selected = if (checked) selected.filterNot { it.sameSetting(option) } else selected + option
-                            },
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Checkbox(checked = checked, onCheckedChange = null, modifier = Modifier.padding(8.dp))
-                        Text(reminderLabel(option, task.allDay))
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.tasks_reminders),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        Icons.Outlined.Close,
+                        stringResource(com.meolist.core.R.string.core_cancel),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            ReminderOptionRow(
+                icon = Icons.Outlined.NotificationsOff,
+                label = stringResource(R.string.tasks_reminder_off),
+                selected = selected.isEmpty(),
+                onClick = { selected = emptyList() },
+            )
+            options.forEach { option ->
+                val checked = selected.any { it.sameSetting(option) }
+                ReminderOptionRow(
+                    icon = Icons.Outlined.Alarm,
+                    label = reminderLabel(option, task.allDay),
+                    selected = checked,
+                    onClick = {
+                        selected = if (checked) {
+                            selected.filterNot { it.sameSetting(option) }
+                        } else {
+                            selected + option
+                        }
+                    },
+                )
+            }
+            ReminderOptionRow(
+                icon = Icons.Outlined.Tune,
+                label = stringResource(R.string.tasks_reminder_custom),
+                selected = customOpen,
+                onClick = { customOpen = !customOpen },
+                trailing = {
+                    Icon(
+                        if (customOpen) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+            )
+            if (customOpen) {
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        if (task.allDay) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    stringResource(R.string.tasks_reminder_days_early),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                IconButton(
+                                    onClick = { if (customDays > 0) customDays-- },
+                                    enabled = customDays > 0,
+                                ) {
+                                    Icon(Icons.Outlined.Remove, null)
+                                }
+                                Text(customDays.toString(), style = MaterialTheme.typography.titleMedium)
+                                IconButton(
+                                    onClick = { if (customDays < 60) customDays++ },
+                                    enabled = customDays < 60,
+                                ) {
+                                    Icon(Icons.Outlined.Add, null)
+                                }
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { pickTime = true }
+                                    .padding(vertical = 12.dp),
+                            ) {
+                                Text(
+                                    stringResource(R.string.tasks_reminder_at_time),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(
+                                    timeLabel(LocalTime.of(customMinute / 60, customMinute % 60)),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Icon(
+                                    Icons.Outlined.KeyboardArrowRight,
+                                    null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        } else {
+                            OutlinedTextField(
+                                value = customAmount,
+                                onValueChange = { text -> customAmount = text.filter { it.isDigit() }.take(3) },
+                                singleLine = true,
+                                isError = amount == null,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                label = { Text(stringResource(R.string.tasks_reminder_how_early)) },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.padding(top = 8.dp),
+                            ) {
+                                OffsetUnit.entries.forEach { u ->
+                                    FilterChip(
+                                        selected = customUnit == u,
+                                        onClick = { customUnit = u },
+                                        label = { Text(stringResource(u.label)) },
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
-                TextButton(onClick = { custom = true }) {
-                    Icon(Icons.Outlined.Add, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.tasks_reminder_custom))
+                Spacer(Modifier.height(12.dp))
+                customReminder?.let {
+                    Text(
+                        reminderLabel(it, task.allDay),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                Button(
+                    onClick = {
+                        customReminder?.let { reminder ->
+                            if (options.none { it.sameSetting(reminder) }) {
+                                options = (options + reminder).sortedWith(reminderOrder)
+                            }
+                            if (selected.none { it.sameSetting(reminder) }) selected = selected + reminder
+                            customOpen = false
+                        }
+                    },
+                    enabled = customReminder != null,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                ) {
+                    Text(stringResource(R.string.tasks_reminder_add))
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(selected.sortedWith(reminderOrder)); onDismiss() }) {
-                Text(stringResource(com.meolist.core.R.string.core_ok))
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(com.meolist.core.R.string.core_cancel))
+                }
+                Button(
+                    onClick = {
+                        onConfirm(selected.sortedWith(reminderOrder))
+                        onDismiss()
+                    },
+                    modifier = Modifier.weight(1f).height(48.dp),
+                ) {
+                    Text(stringResource(com.meolist.core.R.string.core_ok))
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(com.meolist.core.R.string.core_cancel)) }
-        },
-    )
-    if (custom) {
-        CustomReminderDialog(
-            task = task,
-            onConfirm = { reminder ->
-                if (options.none { it.sameSetting(reminder) }) options = (options + reminder).sortedWith(reminderOrder)
-                if (selected.none { it.sameSetting(reminder) }) selected = selected + reminder
+        }
+    }
+    if (pickTime) {
+        MeoTimePickerDialog(
+            initial = LocalTime.of(customMinute / 60, customMinute % 60),
+            onConfirm = {
+                customMinute = it.hour * 60 + it.minute
+                pickTime = false
             },
-            onDismiss = { custom = false },
+            onDismiss = { pickTime = false },
         )
     }
 }
 
 private val reminderOrder = compareBy<Reminder>({ it.offsetMin }, { -(it.minuteOfDay ?: 0) })
 
-private enum class OffsetUnit(val minutes: Int, val label: Int) {
+internal enum class OffsetUnit(val minutes: Int, val label: Int) {
     MINUTES(1, R.string.tasks_unit_minutes),
     HOURS(60, R.string.tasks_unit_hours),
     DAYS(DAY, R.string.tasks_unit_days),
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun CustomReminderDialog(task: Task, onConfirm: (Reminder) -> Unit, onDismiss: () -> Unit) {
-    var amount by remember { mutableStateOf("10") }
-    var unit by remember { mutableStateOf(OffsetUnit.MINUTES) }
-    var days by remember { mutableIntStateOf(0) }
-    var minuteOfDay by remember { mutableIntStateOf(Reminder.DEFAULT_MINUTE_OF_DAY) }
-    var pickTime by remember { mutableStateOf(false) }
-
-    val value = amount.toIntOrNull()
-    val reminder = if (task.allDay) {
-        Reminder(ownerType = ReminderOwner.TASK, ownerId = task.id, kind = ReminderKind.RELATIVE, offsetMin = days * DAY, minuteOfDay = minuteOfDay)
-    } else {
-        value?.takeIf { it in 0..999 }?.let {
-            Reminder(ownerType = ReminderOwner.TASK, ownerId = task.id, offsetMin = it * unit.minutes)
-        }
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.tasks_reminder_custom)) },
-        text = {
-            Column {
-                if (task.allDay) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.tasks_reminder_days_early), Modifier.weight(1f))
-                        Stepper(days, 0..60) { days = it }
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.tasks_reminder_at_time), Modifier.weight(1f))
-                        TextButton(onClick = { pickTime = true }) { Text(timeLabel(LocalTime.of(minuteOfDay / 60, minuteOfDay % 60))) }
-                    }
-                } else {
-                    OutlinedTextField(
-                        value = amount,
-                        onValueChange = { text -> amount = text.filter { it.isDigit() }.take(3) },
-                        singleLine = true,
-                        isError = value == null,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        label = { Text(stringResource(R.string.tasks_reminder_how_early)) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                        OffsetUnit.entries.forEach { u ->
-                            FilterChip(selected = unit == u, onClick = { unit = u }, label = { Text(stringResource(u.label)) })
-                        }
-                    }
-                }
-                reminder?.let {
-                    Text(
-                        reminderLabel(it, task.allDay),
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { reminder?.let(onConfirm); onDismiss() }, enabled = reminder != null) {
-                Text(stringResource(com.meolist.core.R.string.core_ok))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(com.meolist.core.R.string.core_cancel)) }
-        },
-    )
-    if (pickTime) {
-        MeoTimePickerDialog(
-            initial = LocalTime.of(minuteOfDay / 60, minuteOfDay % 60),
-            onConfirm = { minuteOfDay = it.hour * 60 + it.minute },
-            onDismiss = { pickTime = false },
-        )
-    }
 }
 
 /** The due date of [task] in [zone], used as the anchor for repeat labels. */

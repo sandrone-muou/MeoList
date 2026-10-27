@@ -139,7 +139,10 @@
     <string name="tasks_reminder_days_before">提前 %1$s，%2$s</string>
     <string name="tasks_reminder_needs_due">需先设置日期</string>
     <string name="tasks_reminder_count">%1$d 个提醒</string>
+    <string name="tasks_reminder_off">不提醒</string>
+    <string name="tasks_reminder_due_context">到期日 %1$s · 全天</string>
     <string name="tasks_reminder_custom">自定义…</string>
+    <string name="tasks_reminder_add">添加提醒</string>
     <string name="tasks_reminder_days_early">提前天数</string>
     <string name="tasks_reminder_at_time">时间</string>
     <string name="tasks_reminder_how_early">提前多久</string>
@@ -163,13 +166,30 @@
     <string name="tasks_timer_list_default">设为该清单的默认活动</string>
     <string name="tasks_timer_new_type">新建活动</string>
     <string name="quadrant_title">四象限</string>
-    <string name="quadrant_hint">重要性由优先级决定；%1$s内到期视为紧急。拖动任务只调整优先级，所在象限由优先级和到期日共同决定。</string>
-    <string name="quadrant_do">立即做</string>
-    <string name="quadrant_schedule">计划做</string>
-    <string name="quadrant_delegate">委派做</string>
-    <string name="quadrant_later">稍后再做</string>
+    <string name="quadrant_hint">带有所属标签的任务按标签归入象限；其余任务按优先级归类，%1$s内到期视为紧急。</string>
+    <string name="quadrant_do">重要且紧急</string>
+    <string name="quadrant_schedule">重要不紧急</string>
+    <string name="quadrant_delegate">紧急不重要</string>
+    <string name="quadrant_later">不重要不紧急</string>
     <string name="quadrant_empty">暂无任务</string>
+    <string name="quadrant_auto_tag">自动归类</string>
+    <string name="quadrant_tags_title">象限标签</string>
+    <string name="quadrant_tags_desc">为象限绑定一个标签，带有该标签的任务会自动归入对应象限；拖动任务时会替换它的象限标签。</string>
+    <string name="quadrant_tags_no_tags">还没有标签，请先在「管理清单和标签」中创建。</string>
+    <string name="quadrant_tag_none">不绑定（自动）</string>
+    <string name="quadrant_tag_required">请先为该象限绑定标签。</string>
+    <string name="quadrant_tag_configure">去设置</string>
     <plurals name="quadrant_urgent_window">
         <item quantity="other">%1$d 天</item>
     </plurals>
+
+    <string name="schedule_tab_date">日期</string>
+    <string name="schedule_tab_time">时间</string>
+    <string name="schedule_next_monday">下周一</string>
+    <string name="schedule_this_afternoon">今天下午</string>
+    <string name="schedule_all_day">全天</string>
+    <string name="schedule_all_day_hint">无具体时间</string>
+    <string name="schedule_due_time_hint">到期时间</string>
+    <string name="schedule_no_date">无日期</string>
+    <string name="tasks_reminder_due_context_timed">到期 %1$s %2$s</string>
 </resources>

@@ -3,7 +3,9 @@
     <string name="settings_title">Settings</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_language">Language</string>
-    <string name="settings_language_desc">Language used for the app interface.</string>
+    <string name="settings_language_desc">System language, English fallback.</string>
+    <string name="settings_language_system">Follow system</string>
+    <string name="settings_language_system_short">System</string>
     <string name="settings_language_zh">中文</string>
     <string name="settings_language_en">English</string>
     <string name="settings_month_chart">Month view chart</string>

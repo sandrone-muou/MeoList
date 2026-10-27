@@ -48,7 +48,15 @@ class BackupCodecTest {
         nutrients = listOf(NutrientDto("record:8", 11, 10, 60)),
         harvests = listOf(HarvestDto(12, "carrot", 11, 70, 180)),
         achievements = listOf(AchievementDto("first_harvest", 70)),
-        settings = SettingsDto(true, 60, 1, 1, true, 540),
+        settings = SettingsDto(
+            multipleTimers = true,
+            ignoreShortRecordSec = 60,
+            firstDayOfWeek = 1,
+            urgentDays = 1,
+            stopTimerOnTaskComplete = true,
+            defaultReminderMinute = 540,
+            quadrantTags = mapOf("URGENT_IMPORTANT" to 5L),
+        ),
     )
 
     @Test
@@ -72,6 +80,13 @@ class BackupCodecTest {
     fun unknownFieldsAreIgnored() {
         val json = BackupCodec.encode(sample()).replaceFirst("\"format\":1", "\"format\":1,\"future\":true")
         assertEquals(sample(), BackupCodec.decode(json))
+    }
+
+    @Test
+    fun oldBackupWithoutQuadrantTagsFallsBackToAutomatic() {
+        val json = BackupCodec.encode(sample()).replace(Regex(",\"quadrantTags\":\\{[^}]*\\}"), "")
+        val settings = BackupCodec.decode(json).settings
+        assertEquals(emptyMap<String, Long>(), settings?.quadrantTags)
     }
 
     @Test
