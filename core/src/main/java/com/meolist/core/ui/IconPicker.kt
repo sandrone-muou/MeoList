@@ -45,7 +45,12 @@ fun MeoIconPicker(
                     .clickable { onSelect(key) },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, key, tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(
+                    icon,
+                    key,
+                    tint = if (isSelected) tint.readableOn(MaterialTheme.colorScheme.surface)
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

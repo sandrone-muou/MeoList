@@ -1,8 +1,5 @@
 package com.meolist.feature.tracker
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -11,23 +8,16 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -65,9 +55,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -86,8 +74,13 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -130,6 +123,10 @@ fun TrackerRoute(
     var showArchived by remember { mutableStateOf(false) }
     var editingRunning by remember { mutableStateOf<TypeCard?>(null) }
     var discarding by remember { mutableStateOf<RunningTimer?>(null) }
+    val minimumCardWidth = maxOf(
+        160.dp * LocalDensity.current.fontScale,
+        timerTextWidth(MaterialTheme.typography.headlineSmall.tabular()) + Meo.spacing.md * 2,
+    )
 
     MeoScaffold(
         title = stringResource(R.string.tracker_title),
@@ -173,7 +170,7 @@ fun TrackerRoute(
                 modifier = Modifier.padding(padding),
             )
             else -> LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 160.dp),
+                columns = GridCells.Adaptive(minSize = minimumCardWidth),
                 contentPadding = PaddingValues(
                     start = Meo.spacing.screen,
                     end = Meo.spacing.screen,
@@ -253,7 +250,6 @@ fun TrackerRoute(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TypeCardView(
     card: TypeCard,
@@ -288,49 +284,90 @@ private fun TypeCardView(
         return (card.recordedMs[period] ?: 0) + live
     }
 
-    Box {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-            modifier = modifier
-                .fillMaxWidth()
-                .then(
-                    if (running != null) {
-                        Modifier.border(1.dp, color.copy(alpha = 0.26f + 0.22f * pulse), MaterialTheme.shapes.large)
-                    } else Modifier,
-                ),
-        ) {
-            Column(Modifier.padding(Meo.spacing.md)) {
+    val density = LocalDensity.current
+    val measurer = rememberTextMeasurer()
+    val titleStyle = MaterialTheme.typography.titleSmall
+    val durationStyle = MaterialTheme.typography.headlineSmall.tabular()
+    val elapsedSample = elapsedText(DurationLayoutSampleMs)
+    val durationSample = durationText(DurationLayoutSampleMs)
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (running != null) {
+                    Modifier.border(1.dp, color.copy(alpha = 0.26f + 0.22f * pulse), MaterialTheme.shapes.large)
+                } else Modifier,
+            ),
+    ) {
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(Meo.spacing.md)) {
+            val textConstraints = Constraints(maxWidth = constraints.maxWidth)
+            val titleWidth = remember(measurer, titleStyle, card.type.name) {
+                measurer.measure(card.type.name, titleStyle, softWrap = false).size.width
+            }
+            val inlineTitle = with(density) { titleWidth.toDp() } <= maxWidth - 96.dp - Meo.spacing.sm
+            val durationHeight = remember(measurer, durationStyle, textConstraints, elapsedSample, durationSample) {
+                maxOf(
+                    measurer.measure(elapsedSample, durationStyle, constraints = textConstraints).size.height,
+                    measurer.measure(durationSample, durationStyle, constraints = textConstraints).size.height,
+                )
+            }
+            Column(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RunningIcon(icon = card.type.icon, color = color, running = running != null)
-                    Spacer(Modifier.width(Meo.spacing.sm))
+                    if (inlineTitle) {
+                        Spacer(Modifier.width(Meo.spacing.sm))
+                        Text(card.type.name, style = titleStyle, modifier = Modifier.weight(1f))
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
+                    Box {
+                        IconButton(onClick = { menu = true }) {
+                            Icon(
+                                Icons.Outlined.MoreVert,
+                                stringResource(com.meolist.core.R.string.core_more_options),
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            if (running != null) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.tracker_adjust_running)) },
+                                    onClick = { menu = false; onEditRunning() },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.tracker_discard)) },
+                                    onClick = { menu = false; onDiscard() },
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.tracker_edit_type)) },
+                                onClick = { menu = false; onEdit() },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.tracker_archive)) },
+                                onClick = { menu = false; onArchive() },
+                            )
+                        }
+                    }
+                }
+                if (!inlineTitle) {
                     Text(
                         card.type.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1,
+                        style = titleStyle,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                     )
-                    IconButton(onClick = { menu = true }, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            Icons.Outlined.MoreVert,
-                            stringResource(com.meolist.core.R.string.core_more_options),
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
                 }
                 Spacer(Modifier.height(Meo.spacing.sm))
                 Text(
-                    if (running != null) {
-                        elapsedText(now - running.startedAt)
-                    } else {
-                        durationText(periodMs(GoalPeriod.DAY))
-                    },
-                    style = MaterialTheme.typography.headlineSmall.tabular(),
-                    color = if (running != null) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+                    if (running != null) elapsedText(now - running.startedAt) else durationText(periodMs(GoalPeriod.DAY)),
+                    style = durationStyle,
+                    color = if (running != null) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = with(density) { durationHeight.toDp() }),
                 )
                 Text(
                     if (running != null) {
@@ -340,14 +377,21 @@ private fun TypeCardView(
                     } else {
                         stringResource(R.string.tracker_today_label)
                     },
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall.tabular(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    minLines = 2,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 card.goal?.let { goal ->
                     val done = periodMs(goal.period)
                     val target = goal.targetSec * 1000
+                    val goalStyle = MaterialTheme.typography.labelSmall.tabular()
+                    val goalSample = stringResource(goalLabel(goal.period), durationSample, durationText(target))
+                    val goalHeight = remember(measurer, goalStyle, goalSample, textConstraints) {
+                        measurer.measure(goalSample, goalStyle, constraints = textConstraints).size.height
+                    }
                     Spacer(Modifier.height(Meo.spacing.sm))
                     MeoProgressBar(
                         progress = (done.toFloat() / target).coerceIn(0f, 1f),
@@ -357,8 +401,9 @@ private fun TypeCardView(
                     Spacer(Modifier.height(4.dp))
                     Text(
                         stringResource(goalLabel(goal.period), durationText(done), durationText(target)),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = goalStyle,
                         color = if (done >= target) color else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = with(density) { goalHeight.toDp() }),
                     )
                 }
                 Spacer(Modifier.height(Meo.spacing.md))
@@ -374,7 +419,7 @@ private fun TypeCardView(
                         ),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
                         interactionSource = interaction,
-                        modifier = Modifier.heightIn(min = 44.dp).scale(buttonScale),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp).scale(buttonScale),
                     ) {
                         Icon(Icons.Outlined.StopCircle, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
@@ -392,7 +437,7 @@ private fun TypeCardView(
                         ),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
                         interactionSource = interaction,
-                        modifier = Modifier.heightIn(min = 44.dp).scale(buttonScale),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp).scale(buttonScale),
                     ) {
                         Icon(Icons.Outlined.PlayArrow, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
@@ -400,20 +445,6 @@ private fun TypeCardView(
                     }
                 }
             }
-        }
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            if (running != null) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.tracker_adjust_running)) },
-                    onClick = { menu = false; onEditRunning() },
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.tracker_discard)) },
-                    onClick = { menu = false; onDiscard() },
-                )
-            }
-            DropdownMenuItem(text = { Text(stringResource(R.string.tracker_edit_type)) }, onClick = { menu = false; onEdit() })
-            DropdownMenuItem(text = { Text(stringResource(R.string.tracker_archive)) }, onClick = { menu = false; onArchive() })
         }
     }
 }
@@ -428,40 +459,50 @@ private fun RunningHero(
     modifier: Modifier = Modifier,
 ) {
     val pulse = rememberPulseAlpha()
+    val minimumTileWidth = maxOf(
+        136.dp * LocalDensity.current.fontScale,
+        timerTextWidth(MaterialTheme.typography.titleMedium.tabular()) + Meo.spacing.md * 2,
+    )
     Card(
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        modifier = modifier.fillMaxWidth().animateContentSize(),
+        modifier = modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.fillMaxWidth().padding(Meo.spacing.lg)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                PulseDot(color = MaterialTheme.colorScheme.primary, pulse = pulse)
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    stringResource(R.string.tracker_running_count, cards.size),
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.weight(1f),
-                )
-                AnimatedVisibility(visible = cards.size > 1) {
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(Meo.spacing.lg)) {
+            val sideBySide = maxWidth >= minimumTileWidth * 2 + Meo.spacing.sm
+            val scrollingTileWidth = maxOf(172.dp * LocalDensity.current.fontScale, minimumTileWidth).coerceAtMost(maxWidth)
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PulseDot(color = MaterialTheme.colorScheme.primary, pulse = pulse)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.tracker_running_count, cards.size),
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f),
+                    )
                     TextButton(
                         onClick = onStopAll,
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary,
-                        ),
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                     ) {
                         Text(stringResource(R.string.tracker_stop_all))
                     }
                 }
-            }
-            Spacer(Modifier.height(Meo.spacing.sm))
-            if (cards.size <= 2) {
-                Row(horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm)) {
-                    cards.forEach { card ->
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = fadeIn(tween(320)) + slideInVertically(tween(320)) { it / 4 },
-                            modifier = Modifier.weight(1f),
-                        ) {
+                Spacer(Modifier.height(Meo.spacing.sm))
+                if (cards.size <= 2 && sideBySide) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm)) {
+                        cards.forEach { card ->
+                            RunningTile(
+                                card = card,
+                                now = now,
+                                onStop = onStop,
+                                onAdjust = onAdjust,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                } else if (cards.size <= 2) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Meo.spacing.sm)) {
+                        cards.forEach { card ->
                             RunningTile(
                                 card = card,
                                 now = now,
@@ -471,20 +512,15 @@ private fun RunningHero(
                             )
                         }
                     }
-                }
-            } else {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm)) {
-                    items(cards, key = { it.type.id }) { card ->
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = fadeIn(tween(320)) + slideInVertically(tween(320)) { it / 4 },
-                        ) {
+                } else {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm)) {
+                        items(cards, key = { it.type.id }) { card ->
                             RunningTile(
                                 card = card,
                                 now = now,
                                 onStop = onStop,
                                 onAdjust = onAdjust,
-                                modifier = Modifier.width(172.dp),
+                                modifier = Modifier.width(scrollingTileWidth),
                             )
                         }
                     }
@@ -515,51 +551,56 @@ private fun RunningTile(
         ),
         label = "runningTileScale",
     )
-    Row(
+    Column(
         modifier
             .scale(tileScale)
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(interactionSource = interaction, indication = LocalIndication.current) { onAdjust(card) }
-            .padding(start = Meo.spacing.md, end = 4.dp, top = Meo.spacing.sm, bottom = Meo.spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = Meo.spacing.md, vertical = Meo.spacing.sm),
     ) {
-        PulseDot(color = accentColor(card.type.color), pulse = pulse)
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.weight(1f)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PulseDot(color = accentColor(card.type.color), pulse = pulse)
+            Spacer(Modifier.width(6.dp))
             Text(
                 card.type.name,
                 style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
-            AnimatedContent(
-                targetState = elapsedText(now - running.startedAt),
-                transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(160)) },
-                label = "runningElapsed",
-            ) { elapsed ->
-                Text(
-                    elapsed,
-                    style = MaterialTheme.typography.titleMedium.tabular(),
-                    maxLines = 1,
+            IconButton(
+                onClick = {
+                    haptic()
+                    onStop(card)
+                },
+            ) {
+                Icon(
+                    Icons.Outlined.StopCircle,
+                    stringResource(R.string.tracker_stop),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }
-        IconButton(
-            onClick = {
-                haptic()
-                onStop(card)
-            },
-            modifier = Modifier.size(36.dp),
-        ) {
-            Icon(
-                Icons.Outlined.StopCircle,
-                stringResource(R.string.tracker_stop),
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp),
-            )
-        }
+        Text(
+            elapsedText(now - running.startedAt),
+            style = MaterialTheme.typography.titleMedium.tabular(),
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
+}
+
+private const val DurationLayoutSampleMs = 9_999L * 3_600_000 + 59 * 60_000 + 59 * 1000
+
+@Composable
+private fun timerTextWidth(style: TextStyle): Dp {
+    val measurer = rememberTextMeasurer()
+    val sample = elapsedText(DurationLayoutSampleMs)
+    val width = remember(measurer, style, sample) {
+        measurer.measure(sample, style, softWrap = false).size.width
+    }
+    return with(LocalDensity.current) { width.toDp() }
 }
 
 @Composable
@@ -597,7 +638,12 @@ private fun RunningIcon(icon: String, color: Color, running: Boolean) {
             Modifier.size(36.dp).clip(CircleShape).background(color),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(ActivityIcons.of(icon), null, tint = color.readableOn(), modifier = Modifier.size(20.dp))
+            Icon(
+                ActivityIcons.of(icon),
+                null,
+                tint = color.readableOn(MaterialTheme.colorScheme.surfaceContainerLow),
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
 }

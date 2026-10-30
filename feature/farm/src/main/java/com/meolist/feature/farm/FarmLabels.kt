@@ -7,9 +7,11 @@ import androidx.compose.material.icons.outlined.Grass
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.meolist.core.theme.Meo
@@ -93,13 +95,17 @@ fun stageLabel(stage: Int): Int = when (stage) {
 
 @Composable
 @ReadOnlyComposable
-fun tierColor(tier: AchievementTier): Color = when (tier) {
-    AchievementTier.BRONZE -> Meo.colors.bronze
-    AchievementTier.SILVER -> Meo.colors.silver
-    AchievementTier.GOLD -> Meo.colors.gold
-    AchievementTier.DIAMOND -> Meo.colors.diamond
-    AchievementTier.LEGEND -> Meo.colors.legend
-}
+fun tierColor(tier: AchievementTier): Color = lerp(
+    when (tier) {
+        AchievementTier.BRONZE -> Meo.colors.bronze
+        AchievementTier.SILVER -> Meo.colors.silver
+        AchievementTier.GOLD -> Meo.colors.gold
+        AchievementTier.DIAMOND -> Meo.colors.diamond
+        AchievementTier.LEGEND -> Meo.colors.legend
+    },
+    MaterialTheme.colorScheme.onSurfaceVariant,
+    0.65f,
+)
 
 @Composable
 fun tierLabel(tier: AchievementTier): String = stringResource(

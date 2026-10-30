@@ -32,6 +32,17 @@ object MeoPalette {
     val default: Int get() = colors.first()
 }
 
+object ActivityPalette {
+    val colors: List<Int> = listOf(
+        0xFF718A9E, 0xFF6C9894, 0xFF879B78, 0xFFA69970, 0xFFB28C75,
+        0xFFB1808B, 0xFF9785AA, 0xFF7E86AA, 0xFF938A83, 0xFF82949A,
+    ).map { it.toInt() }
+
+    val default: Int get() = colors.first()
+}
+
+internal fun pickerColors(colors: List<Int>, selected: Int): List<Int> = (colors + selected).distinct()
+
 @Composable
 fun ColorDot(color: Int, modifier: Modifier = Modifier, size: Dp = 12.dp) {
     Box(modifier.size(size).clip(CircleShape).background(Color(color)))
@@ -39,13 +50,18 @@ fun ColorDot(color: Int, modifier: Modifier = Modifier, size: Dp = 12.dp) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ColorPicker(selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun ColorPicker(
+    selected: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    colors: List<Int> = MeoPalette.colors,
+) {
     FlowRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        MeoPalette.colors.forEach { color ->
+        pickerColors(colors, selected).forEach { color ->
             val isSelected = color == selected
             Box(
                 modifier = Modifier
@@ -59,7 +75,14 @@ fun ColorPicker(selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Mod
                     .clickable { onSelect(color) },
                 contentAlignment = Alignment.Center,
             ) {
-                if (isSelected) Icon(Icons.Filled.Check, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                if (isSelected) {
+                    Icon(
+                        Icons.Filled.Check,
+                        null,
+                        tint = Color(color).readableOn(MaterialTheme.colorScheme.surface),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
             }
         }
     }

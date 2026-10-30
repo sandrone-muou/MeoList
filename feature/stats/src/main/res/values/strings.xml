@@ -8,6 +8,8 @@
     <string name="stats_next">Next period</string>
     <string name="stats_back_to_now">Back to current</string>
     <string name="stats_total">Total</string>
+    <string name="stats_hour_short">h</string>
+    <string name="stats_minute_short">m</string>
     <string name="stats_daily_average">Daily average</string>
     <string name="stats_active_days">Active days</string>
     <string name="stats_tasks_done">Tasks done</string>

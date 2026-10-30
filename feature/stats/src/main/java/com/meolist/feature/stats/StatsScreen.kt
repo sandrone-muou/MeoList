@@ -11,7 +11,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,13 +23,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.Card
@@ -35,12 +36,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -58,6 +57,9 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -74,11 +76,14 @@ import com.meolist.core.ui.readableOn
 import com.meolist.core.ui.charts.ChartBar
 import com.meolist.core.ui.charts.ChartSlice
 import com.meolist.core.ui.charts.DonutChart
+import com.meolist.core.ui.charts.donutDiameterForCenter
 import com.meolist.core.ui.charts.StackedBarChart
+import androidx.compose.material3.CircularProgressIndicator
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.today
 import com.meolist.domain.settings.AppPreferences
 import com.meolist.domain.settings.MonthChartStyle
+import com.meolist.domain.settings.StatsDefaultView
 import com.meolist.domain.stats.StatsBucket
 import com.meolist.domain.stats.StatsPeriod
 import com.meolist.domain.stats.StatsRange
@@ -102,7 +107,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -117,6 +127,7 @@ data class StatsState(
     val selectedType: Long? = null,
     val firstDayOfWeek: java.time.DayOfWeek = java.time.DayOfWeek.MONDAY,
     val monthChartStyle: MonthChartStyle = MonthChartStyle.HEATMAP,
+    val isLoading: Boolean = true,
 )
 
 private data class StatsInput(val period: StatsPeriod, val anchor: LocalDate)
@@ -130,8 +141,26 @@ class StatsViewModel @Inject constructor(
     private val prefs: AppPreferences,
     private val clock: Clock,
 ) : ViewModel() {
-    private val input = MutableStateFlow(StatsInput(StatsPeriod.WEEK, clock.today()))
+    private val input = MutableStateFlow<StatsInput?>(null)
     private val selected = MutableStateFlow<Long?>(null)
+    private val periodWrites = Channel<StatsPeriod>(Channel.UNLIMITED)
+
+    init {
+        viewModelScope.launch {
+            val settings = prefs.settings.first()
+            val period = when (settings.statsDefaultView) {
+                StatsDefaultView.DAY -> StatsPeriod.DAY
+                StatsDefaultView.WEEK -> StatsPeriod.WEEK
+                StatsDefaultView.MONTH -> StatsPeriod.MONTH
+                StatsDefaultView.YEAR -> StatsPeriod.YEAR
+                StatsDefaultView.LAST_USED -> settings.lastStatsPeriod
+            }
+            input.value = StatsInput(period, clock.today())
+            for (chosen in periodWrites) {
+                prefs.updateSettings { it.copy(lastStatsPeriod = chosen) }
+            }
+        }
+    }
 
     /** Keeps running timers' shares fresh while the screen is open. */
     private val ticker: Flow<Long> = flow {
@@ -148,13 +177,11 @@ class StatsViewModel @Inject constructor(
         val previousTotalMs: Long,
         val completedTasks: Int,
         val types: List<ActivityType>,
-        val firstDayOfWeek: java.time.DayOfWeek,
-        val monthChartStyle: MonthChartStyle,
     )
 
-    private val window: Flow<Window> = combine(input, prefs.settings) { i, settings ->
-        Triple(i, settings.firstDayOfWeek, settings.monthChartStyle)
-    }.distinctUntilChanged().flatMapLatest { (i, firstDay, chartStyle) ->
+    private val window: Flow<Window> = combine(input.filterNotNull(), prefs.settings) { i, settings ->
+        i to settings.firstDayOfWeek
+    }.distinctUntilChanged().flatMapLatest { (i, firstDay) ->
         val range = TimeStatsCalculator.range(i.period, i.anchor, firstDay)
         val previous = TimeStatsCalculator.shift(range, -1, firstDay)
         val zone = clock.zone()
@@ -178,45 +205,53 @@ class StatsViewModel @Inject constructor(
                     t.isDone && t.completedAt?.let { it >= from && it < to } == true
                 },
                 types = allTypes,
-                firstDayOfWeek = firstDay,
-                monthChartStyle = chartStyle,
             )
         }.combine(ticker) { w, _ -> w }
     }
 
-    val state: StateFlow<StatsState> = combine(window, selected) { w, selectedType ->
+    val state: StateFlow<StatsState> = combine(
+        window.onStart<Window?> { emit(null) }, selected, input, prefs.settings,
+    ) { window, selectedType, current, settings ->
+        if (current == null) return@combine StatsState()
+        val range = TimeStatsCalculator.range(current.period, current.anchor, settings.firstDayOfWeek)
+        val loaded = window?.takeIf { it.input == current && it.range == range }
         StatsState(
-            period = w.input.period,
-            range = w.range,
+            period = current.period,
+            range = range,
             today = clock.today(),
-            stats = w.stats,
-            previousTotalMs = w.previousTotalMs,
-            completedTasks = w.completedTasks,
-            types = w.types,
-            selectedType = selectedType?.takeIf { id -> w.types.any { it.id == id } },
-            firstDayOfWeek = w.firstDayOfWeek,
-            monthChartStyle = w.monthChartStyle,
+            stats = loaded?.stats,
+            previousTotalMs = loaded?.previousTotalMs ?: 0,
+            completedTasks = loaded?.completedTasks ?: 0,
+            types = loaded?.types.orEmpty(),
+            selectedType = selectedType?.takeIf { id -> loaded == null || loaded.types.any { it.id == id } },
+            firstDayOfWeek = settings.firstDayOfWeek,
+            monthChartStyle = settings.monthChartStyle,
+            isLoading = false,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsState())
 
     fun now(): Long = clock.now()
 
     fun setPeriod(period: StatsPeriod) {
-        input.value = input.value.copy(period = period, anchor = clock.today())
+        val current = input.value ?: return
+        input.value = current.copy(period = period, anchor = clock.today())
         selected.value = null
+        periodWrites.trySend(period)
     }
 
     fun move(steps: Long) {
-        val current = state.value
-        val shifted = TimeStatsCalculator.shift(current.range, steps, current.firstDayOfWeek)
-        // Never move past the period that contains today.
-        if (shifted.start > current.today) return
-        input.value = input.value.copy(anchor = shifted.start)
+        val current = input.value ?: return
+        val firstDay = state.value.firstDayOfWeek
+        val range = TimeStatsCalculator.range(current.period, current.anchor, firstDay)
+        val shifted = TimeStatsCalculator.shift(range, steps, firstDay)
+        if (shifted.start > clock.today()) return
+        input.value = current.copy(anchor = shifted.start)
         selected.value = null
     }
 
     fun backToToday() {
-        input.value = input.value.copy(anchor = clock.today())
+        val current = input.value ?: return
+        input.value = current.copy(anchor = clock.today())
         selected.value = null
     }
 
@@ -237,6 +272,12 @@ fun StatsRoute(onBack: () -> Unit, vm: StatsViewModel = hiltViewModel()) {
         title = stringResource(R.string.stats_title),
         onBack = onBack,
     ) { padding ->
+        if (state.isLoading) {
+            Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return@MeoScaffold
+        }
         Column(
             Modifier
                 .padding(padding)
@@ -285,7 +326,11 @@ fun StatsRoute(onBack: () -> Unit, vm: StatsViewModel = hiltViewModel()) {
 
             val stats = state.stats
             val types = state.types.associateBy { it.id }
-            if (stats == null || stats.totalMs <= 0) {
+            if (stats == null) {
+                Box(Modifier.fillMaxWidth().padding(vertical = 48.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (stats.totalMs <= 0) {
                 EmptyStats(Modifier.padding(vertical = 48.dp))
             } else {
                 SummaryCard(state)
@@ -317,6 +362,7 @@ fun StatsRoute(onBack: () -> Unit, vm: StatsViewModel = hiltViewModel()) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SummaryCard(state: StatsState) {
     val stats = state.stats ?: return
@@ -325,28 +371,39 @@ private fun SummaryCard(state: StatsState) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-            Row(verticalAlignment = Alignment.Bottom) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 Text(
                     durationText(stats.totalMs),
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = "tnum"),
                     fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.align(Alignment.Bottom),
                 )
-                Spacer(Modifier.width(8.dp))
                 ChangeBadge(current = stats.totalMs, previous = state.previousTotalMs)
-                Spacer(Modifier.weight(1f))
                 Text(
                     stringResource(previousLabel(state.period)),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.align(Alignment.Bottom),
                 )
             }
             Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SummaryValue(stringResource(R.string.stats_daily_average), durationText(stats.dailyAverageMs), Modifier.weight(1f))
-                SummaryDivider()
-                SummaryValue(stringResource(R.string.stats_active_days), stats.activeDays.toString(), Modifier.weight(1f))
-                SummaryDivider()
-                SummaryValue(stringResource(R.string.stats_tasks_done), state.completedTasks.toString(), Modifier.weight(1f))
+            if (LocalDensity.current.fontScale > 1.15f) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SummaryValue(stringResource(R.string.stats_daily_average), durationText(stats.dailyAverageMs))
+                    SummaryValue(stringResource(R.string.stats_active_days), stats.activeDays.toString())
+                    SummaryValue(stringResource(R.string.stats_tasks_done), state.completedTasks.toString())
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SummaryValue(stringResource(R.string.stats_daily_average), durationText(stats.dailyAverageMs), Modifier.weight(1f))
+                    SummaryDivider()
+                    SummaryValue(stringResource(R.string.stats_active_days), stats.activeDays.toString(), Modifier.weight(1f))
+                    SummaryDivider()
+                    SummaryValue(stringResource(R.string.stats_tasks_done), state.completedTasks.toString(), Modifier.weight(1f))
+                }
             }
         }
     }
@@ -360,8 +417,6 @@ private fun SummaryValue(label: String, value: String, modifier: Modifier = Modi
             label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -387,6 +442,15 @@ private fun ChangeBadge(current: Long, previous: Long) {
     )
 }
 
+internal fun statsDurationGroups(ms: Long, hourSuffix: String, minuteSuffix: String): List<String> {
+    val minutes = ms.coerceAtLeast(0L) / 60_000L
+    val hours = minutes / 60L
+    return buildList {
+        if (hours > 0L) add("$hours$hourSuffix")
+        if (hours == 0L || minutes % 60L != 0L) add("${minutes % 60L}$minuteSuffix")
+    }
+}
+
 @Composable
 private fun PieCard(
     state: StatsState,
@@ -394,7 +458,34 @@ private fun PieCard(
     types: Map<Long, ActivityType>,
     vm: StatsViewModel,
 ) {
-    val total = stats.totalMs
+    val groups = statsDurationGroups(
+        stats.totalMs, stringResource(R.string.stats_hour_short), stringResource(R.string.stats_minute_short),
+    )
+    val totalLabel = stringResource(R.string.stats_total)
+    val fullDescription = "$totalLabel: ${durationText(stats.totalMs)}"
+    val durationStyle = MaterialTheme.typography.titleSmall.copy(
+        fontWeight = FontWeight.SemiBold, fontFeatureSettings = "tnum",
+    )
+    val labelStyle = MaterialTheme.typography.labelSmall
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val measuredGroups = groups.map { measurer.measure(it, durationStyle, softWrap = false).size }
+    val measuredLabel = measurer.measure(totalLabel, labelStyle, softWrap = false).size
+    val contentSide = with(density) {
+        maxOf(
+            measuredGroups.maxOf { it.width }, measuredLabel.width,
+            measuredGroups.sumOf { it.height } + measuredLabel.height + 2.dp.roundToPx(),
+        ).toDp() + 2.dp
+    }
+    val thickness = 20.dp
+    val centerPadding = 6.dp
+    val requiredDiameter = donutDiameterForCenter(contentSide.value, thickness.value, centerPadding.value).dp
+    val legendWidth = with(density) {
+        val nameWidth = stats.byType.take(4).maxOfOrNull {
+            measurer.measure(types[it.typeId]?.name.orEmpty().take(8), MaterialTheme.typography.bodySmall).size.width
+        } ?: 0
+        maxOf(88.dp * fontScale, nameWidth.toDp()) + 24.dp
+    }
     val slices = stats.byType.map { totalOf ->
         ChartSlice(
             key = totalOf.typeId,
@@ -402,90 +493,67 @@ private fun PieCard(
             color = types[totalOf.typeId]?.let { accentColor(it.color) } ?: MaterialTheme.colorScheme.outline,
         )
     }
+    val totalContent: @Composable () -> Unit = {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.clearAndSetSemantics { contentDescription = fullDescription },
+        ) {
+            groups.forEach { group ->
+                Text(group, style = durationStyle, textAlign = TextAlign.Center)
+            }
+            Spacer(Modifier.height(2.dp))
+            Text(totalLabel, style = labelStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
     Card(
         Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.stats_by_activity), style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.weight(1f))
-                if (state.selectedType != null) {
-                    Text(
-                        types[state.selectedType]?.name.orEmpty(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .clip(MaterialTheme.shapes.small)
-                            .clickable { vm.selectType(null) }
-                            .padding(4.dp),
-                    )
-                }
+            Text(stringResource(R.string.stats_by_activity), style = MaterialTheme.typography.titleSmall)
+            if (state.selectedType != null) {
+                Text(
+                    types[state.selectedType]?.name.orEmpty(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable { vm.selectType(null) }
+                        .padding(vertical = 4.dp),
+                )
             }
             Spacer(Modifier.height(8.dp))
-            val center: @Composable () -> Unit = {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        durationText(total),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        softWrap = false,
-                    )
-                    Text(
-                        stringResource(R.string.stats_total),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val centerFits = requiredDiameter <= maxWidth
+                val diameter = maxOf(144.dp, requiredDiameter).coerceAtMost(maxWidth)
+                val ring: @Composable () -> Unit = {
+                    DonutChart(
+                        slices = slices,
+                        selectedKey = state.selectedType,
+                        onSelect = vm::selectType,
+                        description = stringResource(R.string.stats_pie_desc),
+                        thickness = thickness,
+                        centerPadding = centerPadding,
+                        modifier = Modifier.size(diameter),
+                        center = { if (centerFits) totalContent() },
                     )
                 }
-            }
-            if (LocalDensity.current.fontScale > 1.15f) {
-                // A large system font leaves too little room beside the ring for both the total
-                // and the legend, so stack them instead of squeezing the labels.
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.fillMaxWidth(0.52f), contentAlignment = Alignment.Center) {
-                        DonutChart(
-                            slices = slices,
-                            selectedKey = state.selectedType,
-                            onSelect = vm::selectType,
-                            description = stringResource(R.string.stats_pie_desc),
-                            thickness = 20.dp,
-                            modifier = Modifier.fillMaxWidth(),
-                            center = center,
-                        )
+                if (centerFits && diameter + 16.dp + legendWidth <= maxWidth) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ring()
+                        Spacer(Modifier.width(16.dp))
+                        ActivityLegend(stats, types, state.selectedType, vm::selectType, Modifier.weight(1f))
                     }
-                    Spacer(Modifier.height(12.dp))
-                    ActivityLegend(
-                        stats = stats,
-                        types = types,
-                        selectedType = state.selectedType,
-                        onSelect = vm::selectType,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.fillMaxWidth(0.42f), contentAlignment = Alignment.Center) {
-                        DonutChart(
-                            slices = slices,
-                            selectedKey = state.selectedType,
-                            onSelect = vm::selectType,
-                            description = stringResource(R.string.stats_pie_desc),
-                            thickness = 20.dp,
-                            modifier = Modifier.fillMaxWidth(),
-                            center = center,
-                        )
+                } else {
+                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        ring()
+                        if (!centerFits) {
+                            Spacer(Modifier.height(8.dp))
+                            totalContent()
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        ActivityLegend(stats, types, state.selectedType, vm::selectType, Modifier.fillMaxWidth())
                     }
-                    Spacer(Modifier.width(16.dp))
-                    ActivityLegend(
-                        stats = stats,
-                        types = types,
-                        selectedType = state.selectedType,
-                        onSelect = vm::selectType,
-                        modifier = Modifier.weight(1f),
-                    )
                 }
             }
         }
@@ -527,15 +595,13 @@ private fun ActivityLegend(
                     Text(
                         type?.name ?: stringResource(R.string.stats_unknown_activity),
                         style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         "$percent% · ${durationText(totalOf.ms)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -586,9 +652,8 @@ private fun BarCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(stringResource(title), style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.weight(1f))
                 if (selectedType != null) {
                     Text(
                         types[selectedType]?.name.orEmpty(),
@@ -597,7 +662,7 @@ private fun BarCard(
                         modifier = Modifier
                             .clip(MaterialTheme.shapes.small)
                             .clickable { onSelectBar(null) }
-                            .padding(4.dp),
+                            .padding(vertical = 4.dp),
                     )
                 }
             }
@@ -663,20 +728,20 @@ private fun MonthHeatmapCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.stats_by_day), style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.weight(1f))
-                if (selectedType != null) {
-                    Text(
-                        types[selectedType]?.name.orEmpty(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 110.dp),
-                    )
-                    Spacer(Modifier.width(10.dp))
-                }
+            Text(stringResource(R.string.stats_by_day), style = MaterialTheme.typography.titleSmall)
+            if (selectedType != null) {
+                Text(
+                    types[selectedType]?.name.orEmpty(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(vertical = 4.dp),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
                     stringResource(R.string.stats_heatmap_less),
                     style = MaterialTheme.typography.labelSmall,

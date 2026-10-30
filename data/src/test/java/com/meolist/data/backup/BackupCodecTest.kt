@@ -1,6 +1,9 @@
 package com.meolist.data.backup
 
 import com.meolist.domain.backup.BackupFormatException
+import com.meolist.domain.settings.AppSettings
+import com.meolist.domain.settings.StatsDefaultView
+import com.meolist.domain.stats.StatsPeriod
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -87,6 +90,38 @@ class BackupCodecTest {
         val json = BackupCodec.encode(sample()).replace(Regex(",\"quadrantTags\":\\{[^}]*\\}"), "")
         val settings = BackupCodec.decode(json).settings
         assertEquals(emptyMap<String, Long>(), settings?.quadrantTags)
+    }
+
+    @Test
+    fun oldBackupWithoutStatsPreferencesDefaultsToWeek() {
+        val json = """{"format":1,"settings":{"multipleTimers":true,"ignoreShortRecordSec":60,
+            "firstDayOfWeek":1,"urgentDays":1,"stopTimerOnTaskComplete":true,"defaultReminderMinute":540}}"""
+        val settings = requireNotNull(BackupCodec.decode(json).settings).toSettings()
+        assertEquals(StatsDefaultView.WEEK, settings.statsDefaultView)
+        assertEquals(StatsPeriod.WEEK, settings.lastStatsPeriod)
+    }
+
+    @Test
+    fun unknownStatsPreferencesFallBackIndependently() {
+        val dto = SettingsDto.from(AppSettings()).copy(statsDefaultView = "FUTURE", lastStatsPeriod = "FUTURE")
+        val file = sample().copy(settings = dto)
+        val decoded = requireNotNull(BackupCodec.decode(BackupCodec.encode(file)).settings)
+        assertEquals(StatsDefaultView.WEEK, decoded.toSettings().statsDefaultView)
+        assertEquals(StatsPeriod.WEEK, decoded.toSettings().lastStatsPeriod)
+        assertEquals(StatsPeriod.DAY, decoded.copy(lastStatsPeriod = "DAY").toSettings().lastStatsPeriod)
+        assertEquals(StatsDefaultView.LAST_USED, decoded.copy(statsDefaultView = "LAST_USED").toSettings().statsDefaultView)
+    }
+
+    @Test
+    fun allStatsPreferencesRoundTripThroughJsonAndDomain() {
+        StatsDefaultView.entries.forEach { view ->
+            StatsPeriod.entries.forEach { period ->
+                val settings = AppSettings(statsDefaultView = view, lastStatsPeriod = period)
+                val file = sample().copy(settings = SettingsDto.from(settings))
+                val decoded = BackupCodec.decode(BackupCodec.encode(file))
+                assertEquals(settings, requireNotNull(decoded.settings).toSettings())
+            }
+        }
     }
 
     @Test

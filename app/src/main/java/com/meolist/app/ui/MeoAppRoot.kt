@@ -145,12 +145,22 @@ fun MeoAppRoot(deepLink: DeepLink? = null, onDeepLinkHandled: () -> Unit = {}) {
                     }
                 },
                 exitTransition = { fadeOut(tween(140)) },
-                popEnterTransition = { fadeIn(tween(220)) },
+                popEnterTransition = {
+                    val topLevel = initialState.destination.route in topLevelRoutes &&
+                        targetState.destination.route in topLevelRoutes
+                    fadeIn(tween(if (topLevel) 200 else 220))
+                },
                 popExitTransition = {
-                    slideOutOfContainer(
-                        AnimatedContentTransitionScope.SlideDirection.End,
-                        tween(260),
-                    ) + fadeOut(tween(220))
+                    if (initialState.destination.route in topLevelRoutes &&
+                        targetState.destination.route in topLevelRoutes
+                    ) {
+                        fadeOut(tween(140))
+                    } else {
+                        slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.End,
+                            tween(260),
+                        ) + fadeOut(tween(220))
+                    }
                 },
             ) {
                 tasksGraph(navController)

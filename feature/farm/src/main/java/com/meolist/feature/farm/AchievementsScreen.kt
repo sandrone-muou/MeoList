@@ -1,10 +1,11 @@
 package com.meolist.feature.farm
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -24,9 +25,12 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Grass
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Lock
@@ -50,11 +54,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -114,7 +118,7 @@ fun AchievementsRoute(
         onBack = onBack,
     ) { padding ->
         LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
+            columns = GridCells.Adaptive(140.dp * LocalDensity.current.fontScale.coerceAtLeast(1f)),
             contentPadding = PaddingValues(
                 start = Meo.spacing.screen,
                 end = Meo.spacing.screen,
@@ -191,71 +195,93 @@ private fun ProgressHero(
 ) {
     Card(
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(
+        Column(
             Modifier.fillMaxWidth().padding(Meo.spacing.lg),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(Meo.spacing.md),
         ) {
+            AchievementOverview(unlocked, total)
+            Text(
+                latest?.let {
+                    stringResource(R.string.farm_achievements_latest, achievementName(it.achievement))
+                } ?: stringResource(R.string.farm_tip),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Meo.spacing.sm),
+            ) {
+                HeroChip(
+                    icon = Icons.Outlined.Grass,
+                    text = stringResource(R.string.farm_chip_harvests) + " " +
+                        snapshot.metrics.harvested.toString(),
+                )
+                HeroChip(
+                    icon = Icons.Outlined.Timer,
+                    text = stringResource(R.string.farm_chip_focus) + " " +
+                        durationText(snapshot.metrics.focusMinutes * 60_000L),
+                )
+                HeroChip(
+                    icon = Icons.Outlined.LocalFireDepartment,
+                    text = stringResource(R.string.farm_chip_streak) + " " +
+                        stringResource(R.string.farm_days, snapshot.metrics.bestStreak),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun AchievementOverview(unlocked: Int, total: Int) {
+    val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val stacked = maxWidth < 280.dp * fontScale
+        val ring: @Composable () -> Unit = {
             ProgressRing(
                 progress = if (total == 0) 0f else unlocked.toFloat() / total,
-                size = 104.dp,
-                stroke = 10.dp,
+                size = 72.dp,
+                stroke = 5.dp,
                 color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.14f),
+                trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        "$unlocked/$total",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                    Text(
-                        stringResource(R.string.farm_achievements_unlocked),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                    )
-                }
+                Icon(
+                    if (total > 0 && unlocked == total) Icons.Outlined.Check else Icons.Outlined.EmojiEvents,
+                    null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp),
+                )
             }
-            Spacer(Modifier.width(Meo.spacing.lg))
-            Column(Modifier.weight(1f)) {
+        }
+        val summary: @Composable (Modifier) -> Unit = { modifier ->
+            Column(modifier, verticalArrangement = Arrangement.spacedBy(Meo.spacing.xs)) {
                 Text(
                     stringResource(R.string.farm_achievements_progress),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.height(2.dp))
                 Text(
-                    latest?.let {
-                        stringResource(R.string.farm_achievements_latest, achievementName(it.achievement))
-                    } ?: stringResource(R.string.farm_tip),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                    stringResource(R.string.farm_achievements_summary, unlocked, total),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
-                Spacer(Modifier.height(Meo.spacing.sm))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    HeroChip(
-                        icon = Icons.Outlined.Grass,
-                        text = stringResource(R.string.farm_chip_harvests) + " " +
-                            snapshot.metrics.harvested.toString(),
-                    )
-                    HeroChip(
-                        icon = Icons.Outlined.Timer,
-                        text = stringResource(R.string.farm_chip_focus) + " " +
-                            durationText(snapshot.metrics.focusMinutes * 60_000L),
-                    )
-                    HeroChip(
-                        icon = Icons.Outlined.LocalFireDepartment,
-                        text = stringResource(R.string.farm_chip_streak) + " " +
-                            stringResource(R.string.farm_days, snapshot.metrics.bestStreak),
-                    )
-                }
+            }
+        }
+        if (stacked) {
+            Column(verticalArrangement = Arrangement.spacedBy(Meo.spacing.md)) {
+                ring()
+                summary(Modifier.fillMaxWidth())
+            }
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Meo.spacing.lg),
+            ) {
+                ring()
+                summary(Modifier.weight(1f))
             }
         }
     }
@@ -265,43 +291,52 @@ private fun ProgressHero(
 private fun HeroChip(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
     Row(
         Modifier
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
-            .padding(horizontal = 10.dp, vertical = 5.dp),
+            .clip(MaterialTheme.shapes.small)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             icon,
             null,
-            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(14.dp),
         )
         Spacer(Modifier.width(4.dp))
         Text(
             text,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
 @Composable
 private fun NextUpRow(next: List<AchievementState>, onClick: (AchievementState) -> Unit) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm)) {
-        items(next, key = { it.achievement.key }) { state ->
-            NextUpCard(state, onClick = { onClick(state) })
+    val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val cardWidth = when {
+            next.size == 1 -> maxWidth
+            maxWidth >= 560.dp * fontScale -> (maxWidth - Meo.spacing.sm) / 2
+            else -> maxWidth - Meo.spacing.xl
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm)) {
+            items(next, key = { it.achievement.key }) { state ->
+                NextUpCard(state, modifier = Modifier.width(cardWidth), onClick = { onClick(state) })
+            }
         }
     }
 }
 
 @Composable
-private fun NextUpCard(state: AchievementState, onClick: () -> Unit) {
+private fun NextUpCard(state: AchievementState, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val color = tierColor(AchievementCatalog.tier(state.achievement))
     Card(
         onClick = onClick,
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        modifier = Modifier.width(224.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        modifier = modifier,
     ) {
         Column(Modifier.padding(Meo.spacing.lg)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -311,30 +346,23 @@ private fun NextUpCard(state: AchievementState, onClick: () -> Unit) {
                     size = 36.dp,
                 )
                 Spacer(Modifier.width(Meo.spacing.sm))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        achievementName(state.achievement),
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        remainingLabel(state),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                    )
-                }
+                Text(
+                    achievementName(state.achievement),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f),
+                )
             }
-            Spacer(Modifier.height(Meo.spacing.md))
-            MeoProgressBar(
-                progress = state.fraction,
-                color = color,
-                height = 6.dp,
+            Spacer(Modifier.height(Meo.spacing.sm))
+            Text(
+                remainingLabel(state),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(Modifier.height(Meo.spacing.md))
+            MeoProgressBar(progress = state.fraction, height = 6.dp)
             Spacer(Modifier.height(Meo.spacing.xs))
             Text(
-                "${state.progress} / ${state.achievement.target}",
+                stringResource(R.string.farm_achievement_progress, state.progress, state.achievement.target),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -370,78 +398,84 @@ private fun BadgeMedallion(state: AchievementState, onClick: () -> Unit) {
     val tier = AchievementCatalog.tier(state.achievement)
     val color = tierColor(tier)
     val haptic = rememberConfirmHaptic()
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(MaterialTheme.shapes.medium)
-            .clickable {
-                haptic()
-                onClick()
-            }
-            .padding(vertical = Meo.spacing.sm, horizontal = Meo.spacing.xs),
+    Card(
+        onClick = {
+            haptic()
+            onClick()
+        },
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = BorderStroke(
+            1.dp,
+            if (state.unlocked) color.copy(alpha = 0.3f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+        ),
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        ProgressRing(
-            progress = if (state.unlocked) 1f else state.fraction,
-            size = 76.dp,
-            stroke = 4.dp,
-            color = if (state.unlocked) color else MaterialTheme.colorScheme.outline,
-            trackColor = if (state.unlocked) {
-                color.copy(alpha = 0.18f)
-            } else {
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-            },
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth().padding(vertical = Meo.spacing.lg, horizontal = Meo.spacing.md),
         ) {
-            Box(
-                Modifier
-                    .size(58.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (state.unlocked) {
-                            Brush.linearGradient(
-                                listOf(color.copy(alpha = 0.95f), color.copy(alpha = 0.6f)),
-                            )
-                        } else {
-                            Brush.linearGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.surfaceContainerHighest,
-                                    MaterialTheme.colorScheme.surfaceContainerHighest,
-                                ),
-                            )
-                        },
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    if (state.unlocked) achievementIcon(state.achievement.metric) else Icons.Outlined.Lock,
-                    contentDescription = achievementName(state.achievement),
-                    tint = if (state.unlocked) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(26.dp),
-                )
-            }
+            AchievementMedal(state)
+            Spacer(Modifier.height(Meo.spacing.sm))
+            Text(
+                achievementName(state.achievement),
+                style = MaterialTheme.typography.labelLarge,
+                textAlign = TextAlign.Center,
+                minLines = 2,
+            )
+            Spacer(Modifier.height(Meo.spacing.xs))
+            Text(
+                stringResource(
+                    if (state.unlocked) R.string.farm_achievements_unlocked else R.string.farm_crop_locked,
+                ),
+                style = MaterialTheme.typography.labelMedium,
+                color = if (state.unlocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                if (state.unlocked) {
+                    tierLabel(tier)
+                } else {
+                    stringResource(R.string.farm_achievement_progress, state.progress, state.achievement.target)
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
         }
-        Spacer(Modifier.height(Meo.spacing.sm))
-        Text(
-            achievementName(state.achievement),
-            style = MaterialTheme.typography.labelMedium,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            if (state.unlocked) {
-                tierLabel(tier)
-            } else {
-                "${state.progress}/${state.achievement.target}"
-            },
-            style = MaterialTheme.typography.labelSmall,
-            color = if (state.unlocked) color else MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-        )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AchievementMedal(state: AchievementState, size: Dp = 72.dp) {
+    val color = tierColor(AchievementCatalog.tier(state.achievement))
+    ProgressRing(
+        progress = if (state.unlocked) 1f else state.fraction,
+        size = size,
+        stroke = 4.dp,
+        color = if (state.unlocked) color else MaterialTheme.colorScheme.primary,
+        trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+    ) {
+        Box(
+            Modifier
+                .size(size - 16.dp)
+                .clip(CircleShape)
+                .background(
+                    if (state.unlocked) color.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceContainerHigh,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                if (state.unlocked) achievementIcon(state.achievement.metric) else Icons.Outlined.Lock,
+                null,
+                tint = if (state.unlocked) color else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(size * 0.38f),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun AchievementDetailSheet(
     state: AchievementState,
@@ -460,64 +494,55 @@ private fun AchievementDetailSheet(
             Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = Meo.spacing.xl)
                 .padding(bottom = Meo.spacing.xl),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ProgressRing(
-                    progress = if (state.unlocked) 1f else state.fraction,
-                    size = 96.dp,
-                    stroke = 6.dp,
-                    color = color,
+            Column(
+                Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Meo.spacing.sm),
+            ) {
+                AchievementMedal(state, size = 88.dp)
+                Text(
+                    achievementName(state.achievement),
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center,
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm, Alignment.CenterHorizontally),
+                    verticalArrangement = Arrangement.spacedBy(Meo.spacing.xs),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Box(
-                        Modifier
-                            .size(74.dp)
-                            .clip(CircleShape)
-                            .background(color.copy(alpha = if (state.unlocked) 1f else 0.14f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            if (state.unlocked) achievementIcon(state.achievement.metric) else Icons.Outlined.Lock,
-                            null,
-                            tint = if (state.unlocked) Color.White else color,
-                            modifier = Modifier.size(34.dp),
-                        )
-                    }
-                }
-                Spacer(Modifier.width(Meo.spacing.lg))
-                Column(Modifier.weight(1f)) {
-                    Text(achievementName(state.achievement), style = MaterialTheme.typography.headlineSmall)
-                    Spacer(Modifier.height(Meo.spacing.xs))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TierPill(tier, color)
-                        Spacer(Modifier.width(Meo.spacing.sm))
-                        Text(
-                            categoryLabel(AchievementCatalog.category(state.achievement)),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Spacer(Modifier.height(Meo.spacing.sm))
+                    TierPill(tier, color)
                     Text(
-                        if (state.unlocked) {
+                        categoryLabel(AchievementCatalog.category(state.achievement)),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                    )
+                }
+                Text(
+                    if (state.unlocked) {
+                        state.unlockedAt?.let { unlockedAt ->
                             stringResource(
                                 R.string.farm_achievement_unlocked_on,
                                 shortDate(
-                                    Instant.ofEpochMilli(state.unlockedAt ?: 0)
+                                    Instant.ofEpochMilli(unlockedAt)
                                         .atZone(ZoneId.systemDefault())
                                         .toLocalDate(),
                                     LocalDate.now(),
                                     currentLocale(),
                                 ),
                             )
-                        } else {
-                            remainingLabel(state)
-                        },
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (state.unlocked) color else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                        } ?: stringResource(R.string.farm_achievements_unlocked)
+                    } else {
+                        stringResource(R.string.farm_crop_locked)
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (state.unlocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
             }
             Spacer(Modifier.height(Meo.spacing.lg))
             Text(
@@ -526,19 +551,18 @@ private fun AchievementDetailSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(Meo.spacing.lg))
-            MeoProgressBar(progress = state.fraction, color = color)
+            MeoProgressBar(progress = state.fraction)
             Spacer(Modifier.height(Meo.spacing.xs))
-            Row(Modifier.fillMaxWidth()) {
+            Text(
+                stringResource(R.string.farm_achievement_progress, state.progress, state.achievement.target),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!state.unlocked) {
                 Text(
-                    "${state.progress} / ${state.achievement.target}",
-                    style = MaterialTheme.typography.labelSmall,
+                    remainingLabel(state),
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.weight(1f))
-                Text(
-                    tierLabel(tier),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = color,
                 )
             }
 
@@ -590,37 +614,30 @@ private fun SeriesRow(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            if (unlocked) {
-                Icon(Icons.Outlined.Check, null, tint = color, modifier = Modifier.size(14.dp))
-            } else {
-                Box(
-                    Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (current) color else MaterialTheme.colorScheme.outlineVariant,
-                        ),
-                )
-            }
+            Icon(
+                if (unlocked) Icons.Outlined.Check else Icons.Outlined.Lock,
+                stringResource(if (unlocked) R.string.farm_achievements_unlocked else R.string.farm_crop_locked),
+                tint = if (unlocked) color else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(14.dp),
+            )
         }
         Spacer(Modifier.width(Meo.spacing.md))
-        Text(
-            achievementName(achievement),
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (unlocked || current) {
-                MaterialTheme.colorScheme.onSurface
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            achievementTargetLabel(achievement),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                achievementName(achievement),
+                style = if (current) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium,
+                color = if (unlocked || current) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+            Text(
+                achievementTargetLabel(achievement),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -629,9 +646,13 @@ private fun TierPill(tier: AchievementTier, color: Color) {
     Box(
         Modifier
             .clip(CircleShape)
-            .background(color.copy(alpha = 0.16f))
+            .background(color.copy(alpha = 0.1f))
             .padding(horizontal = 10.dp, vertical = 3.dp),
     ) {
-        Text(tierLabel(tier), style = MaterialTheme.typography.labelSmall, color = color)
+        Text(
+            tierLabel(tier),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

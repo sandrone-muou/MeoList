@@ -8,6 +8,8 @@
     <string name="stats_next">下一个周期</string>
     <string name="stats_back_to_now">回到当前</string>
     <string name="stats_total">合计</string>
+    <string name="stats_hour_short">小时</string>
+    <string name="stats_minute_short">分钟</string>
     <string name="stats_daily_average">日均</string>
     <string name="stats_active_days">有记录天数</string>
     <string name="stats_tasks_done">完成任务</string>

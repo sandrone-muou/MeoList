@@ -2,6 +2,8 @@ package com.meolist.data.backup
 
 import com.meolist.domain.settings.AppSettings
 import com.meolist.domain.settings.MonthChartStyle
+import com.meolist.domain.settings.StatsDefaultView
+import com.meolist.domain.stats.StatsPeriod
 import com.meolist.domain.task.Quadrant
 import java.time.DayOfWeek
 import kotlinx.serialization.Serializable
@@ -198,6 +200,8 @@ data class SettingsDto(
     val defaultReminderMinute: Int,
     val monthChartStyle: String = MonthChartStyle.HEATMAP.name,
     val quadrantTags: Map<String, Long> = emptyMap(),
+    val statsDefaultView: String = StatsDefaultView.WEEK.name,
+    val lastStatsPeriod: String = StatsPeriod.WEEK.name,
 ) {
     fun toSettings(): AppSettings = AppSettings(
         multipleTimers = multipleTimers,
@@ -208,6 +212,10 @@ data class SettingsDto(
         defaultReminderMinute = defaultReminderMinute.coerceIn(0, 1439),
         monthChartStyle = runCatching { MonthChartStyle.valueOf(monthChartStyle) }
             .getOrDefault(MonthChartStyle.HEATMAP),
+        statsDefaultView = runCatching { StatsDefaultView.valueOf(statsDefaultView) }
+            .getOrDefault(StatsDefaultView.WEEK),
+        lastStatsPeriod = runCatching { StatsPeriod.valueOf(lastStatsPeriod) }
+            .getOrDefault(StatsPeriod.WEEK),
         quadrantTags = quadrantTags.mapNotNull { (key, id) ->
             runCatching { Quadrant.valueOf(key) }.getOrNull()?.let { it to id }
         }.toMap(),
@@ -223,6 +231,8 @@ data class SettingsDto(
             defaultReminderMinute = settings.defaultReminderMinute,
             monthChartStyle = settings.monthChartStyle.name,
             quadrantTags = settings.quadrantTags.mapKeys { it.key.name },
+            statsDefaultView = settings.statsDefaultView.name,
+            lastStatsPeriod = settings.lastStatsPeriod.name,
         )
     }
 }

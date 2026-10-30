@@ -12,6 +12,15 @@
     <string name="settings_month_chart_desc">热力图显示每天的活动强度，直方图显示每天时长。</string>
     <string name="settings_chart_heatmap">热力图</string>
     <string name="settings_chart_bars">直方图</string>
+    <string name="settings_stats_default_view">统计默认视图</string>
+    <string name="settings_stats_default_view_desc">显示今日所在周期；记住上次仅保留视图，不保留历史日期。</string>
+    <string name="settings_stats_day">日</string>
+    <string name="settings_stats_week">周</string>
+    <string name="settings_stats_month">月</string>
+    <string name="settings_stats_year">年</string>
+    <string name="settings_stats_last_used">记住上次</string>
+    <string name="settings_time_switch_input">切换到键盘输入</string>
+    <string name="settings_time_switch_picker">切换到时钟表盘</string>
     <string name="settings_section_timing">计时</string>
     <string name="settings_multiple_timers">允许同时计时</string>
     <string name="settings_multiple_timers_desc">多个活动可以同时运行。</string>
@@ -57,5 +66,5 @@
     <string name="settings_about_version">MeoList %1$s</string>
     <string name="settings_about_author">作者：sandrone-muou</string>
     <string name="settings_about_license">Apache License 2.0</string>
-    <string name="settings_app_version">0.1.0</string>
+    <string name="settings_app_version">0.2.0</string>
 </resources>

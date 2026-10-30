@@ -86,7 +86,6 @@ import com.meolist.core.ui.components.MeoListDivider
 import com.meolist.core.ui.components.MeoListGroup
 import com.meolist.core.ui.components.MeoProgressBar
 import com.meolist.core.ui.components.MeoScaffold
-import com.meolist.core.ui.components.ProgressRing
 import com.meolist.core.ui.components.SectionHeader
 import com.meolist.core.ui.components.StatChip
 import com.meolist.core.ui.components.rememberConfirmHaptic
@@ -635,49 +634,42 @@ private fun AchievementsPreview(snapshot: FarmSnapshot, onOpen: () -> Unit) {
         onClick = onOpen,
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(Modifier.fillMaxWidth().padding(Meo.spacing.lg)) {
-            ProgressRing(
-                progress = if (total == 0) 0f else unlocked.toFloat() / total,
-                size = 76.dp,
-                stroke = 7.dp,
-                color = MaterialTheme.colorScheme.primary,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("$unlocked/$total", style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        stringResource(R.string.farm_achievements_unlocked),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+        Column(
+            Modifier.fillMaxWidth().padding(Meo.spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Meo.spacing.md),
+        ) {
+            AchievementOverview(unlocked, total)
+            if (next.isNotEmpty()) {
+                Text(
+                    stringResource(R.string.farm_achievements_next),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            Spacer(Modifier.width(Meo.spacing.lg))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Meo.spacing.sm)) {
-                if (next.isEmpty()) {
-                    Text(
-                        stringResource(R.string.farm_achievements_summary, unlocked, total),
-                        style = MaterialTheme.typography.titleSmall,
+            next.forEach { state ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconBadge(
+                        icon = achievementIcon(state.achievement.metric),
+                        color = tierColor(AchievementCatalog.tier(state.achievement)),
+                        size = 32.dp,
                     )
-                }
-                next.forEach { state ->
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                achievementName(state.achievement),
-                                style = MaterialTheme.typography.labelLarge,
-                                modifier = Modifier.weight(1f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text(
-                                remainingLabel(state),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Spacer(Modifier.height(3.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            achievementName(state.achievement),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        Text(
+                            remainingLabel(state),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(Meo.spacing.xs))
                         MeoProgressBar(progress = state.fraction, height = 4.dp)
                     }
                 }

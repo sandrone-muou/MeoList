@@ -1,11 +1,14 @@
 package com.meolist.domain.settings
 
+import com.meolist.domain.stats.StatsPeriod
 import com.meolist.domain.task.Quadrant
 import kotlinx.coroutines.flow.Flow
 import java.time.DayOfWeek
 
 /** How the monthly statistics view is drawn. */
 enum class MonthChartStyle { HEATMAP, BARS }
+
+enum class StatsDefaultView { DAY, WEEK, MONTH, YEAR, LAST_USED }
 
 data class AppSettings(
     /** Allow several activity timers to run at the same time. */
@@ -23,6 +26,8 @@ data class AppSettings(
     val monthChartStyle: MonthChartStyle = MonthChartStyle.HEATMAP,
     /** Optional tag per quadrant; tagged tasks take precedence over the date/priority fallback. */
     val quadrantTags: Map<Quadrant, Long> = emptyMap(),
+    val statsDefaultView: StatsDefaultView = StatsDefaultView.WEEK,
+    val lastStatsPeriod: StatsPeriod = StatsPeriod.WEEK,
 )
 
 interface AppPreferences {

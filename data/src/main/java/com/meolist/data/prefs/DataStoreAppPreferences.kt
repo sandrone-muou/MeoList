@@ -12,6 +12,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.meolist.domain.settings.AppPreferences
 import com.meolist.domain.settings.AppSettings
 import com.meolist.domain.settings.MonthChartStyle
+import com.meolist.domain.settings.StatsDefaultView
+import com.meolist.domain.stats.StatsPeriod
 import com.meolist.domain.task.Quadrant
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -38,6 +40,8 @@ class DataStoreAppPreferences @Inject constructor(
         val stopTimerOnTaskComplete = booleanPreferencesKey("stop_timer_on_task_complete")
         val defaultReminderMinute = intPreferencesKey("default_reminder_minute")
         val monthChartStyle = stringPreferencesKey("month_chart_style")
+        val statsDefaultView = stringPreferencesKey("stats_default_view")
+        val lastStatsPeriod = stringPreferencesKey("last_stats_period")
         val lastTaskFilter = stringPreferencesKey("last_task_filter")
         val quadrantTags = mapOf(
             Quadrant.URGENT_IMPORTANT to longPreferencesKey("quadrant_tag_urgent_important"),
@@ -59,6 +63,8 @@ class DataStoreAppPreferences @Inject constructor(
             prefs[Keys.stopTimerOnTaskComplete] = next.stopTimerOnTaskComplete
             prefs[Keys.defaultReminderMinute] = next.defaultReminderMinute
             prefs[Keys.monthChartStyle] = next.monthChartStyle.name
+            prefs[Keys.statsDefaultView] = next.statsDefaultView.name
+            prefs[Keys.lastStatsPeriod] = next.lastStatsPeriod.name
             Keys.quadrantTags.forEach { (quadrant, key) ->
                 val tagId = next.quadrantTags[quadrant]
                 if (tagId != null) prefs[key] = tagId else prefs.remove(key)
@@ -84,6 +90,10 @@ class DataStoreAppPreferences @Inject constructor(
             defaultReminderMinute = this[Keys.defaultReminderMinute] ?: defaults.defaultReminderMinute,
             monthChartStyle = this[Keys.monthChartStyle]?.let { runCatching { MonthChartStyle.valueOf(it) }.getOrNull() }
                 ?: defaults.monthChartStyle,
+            statsDefaultView = this[Keys.statsDefaultView]?.let { runCatching { StatsDefaultView.valueOf(it) }.getOrNull() }
+                ?: defaults.statsDefaultView,
+            lastStatsPeriod = this[Keys.lastStatsPeriod]?.let { runCatching { StatsPeriod.valueOf(it) }.getOrNull() }
+                ?: defaults.lastStatsPeriod,
             quadrantTags = Keys.quadrantTags.mapNotNull { (quadrant, key) ->
                 this[key]?.let { quadrant to it }
             }.toMap(),

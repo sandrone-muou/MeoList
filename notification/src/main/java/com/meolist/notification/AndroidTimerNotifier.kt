@@ -1,14 +1,19 @@
 package com.meolist.notification
 
 import android.annotation.SuppressLint
+import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import java.io.File
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.meolist.core.locale.localized
+import com.meolist.domain.common.ApplicationScope
 import com.meolist.domain.tracker.ActivityGoal
 import com.meolist.domain.tracker.ActivityType
 import com.meolist.domain.tracker.GoalPeriod
@@ -17,6 +22,9 @@ import com.meolist.domain.tracker.TimerNotifier
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * One ongoing notification per running timer. The system chronometer counts up from the stored start,
@@ -25,26 +33,56 @@ import javax.inject.Singleton
 @Singleton
 class AndroidTimerNotifier @Inject constructor(
     @ApplicationContext private val context: Context,
+    @ApplicationScope private val scope: CoroutineScope,
 ) : TimerNotifier {
     private val manager = NotificationManagerCompat.from(context)
     private val systemManager = context.getSystemService(NotificationManager::class.java)
+    private val state by lazy { TimerNotificationState(File(context.noBackupFilesDir, "dismissed_timers")) }
 
-    @SuppressLint("MissingPermission") // Checked through areNotificationsEnabled().
+    @Synchronized
+    @SuppressLint("MissingPermission")
     override fun showRunning(timers: List<RunningTimerView>) {
         val context = context.localized()
-        val ids = timers.map { notificationId(it.timer.id) }.toSet()
-        // Removing the summary first: cancelling a summary can take its children along.
-        if (timers.size < 2) manager.cancel(TAG_SUMMARY, SUMMARY_ID)
+        val visible = state.visible(timers)
+        val ids = visible.map { notificationId(it.timer.id) }.toSet()
+        // Cancelling a summary can take its children along, so remove it before posting children.
+        if (visible.size < 2) manager.cancel(TAG_SUMMARY, SUMMARY_ID)
         systemManager.activeNotifications
             .filter { it.tag == TAG_TIMER && it.id !in ids }
             .forEach { manager.cancel(TAG_TIMER, it.id) }
-        if (!manager.areNotificationsEnabled()) return
+        if (!manager.areNotificationsEnabled()) {
+            persist()
+            return
+        }
         try {
-            timers.forEach { manager.notify(TAG_TIMER, notificationId(it.timer.id), timerNotification(context, it)) }
-            if (timers.size >= 2) manager.notify(TAG_SUMMARY, SUMMARY_ID, summary(context, timers))
+            // Demote the previous candidate before requesting promotion for the new one.
+            visible.drop(1).forEach { timer ->
+                manager.notify(TAG_TIMER, notificationId(timer.timer.id), timerNotification(context, timer, promote = false))
+            }
+            visible.firstOrNull()?.let { timer ->
+                manager.notify(TAG_TIMER, notificationId(timer.timer.id), timerNotification(context, timer, promote = true))
+            }
+            if (visible.size >= 2) manager.notify(TAG_SUMMARY, SUMMARY_ID, summary(context, visible))
         } catch (_: SecurityException) {
             // Notification permission was revoked.
         }
+        persist()
+    }
+
+    /** Marks the timers dismissed on the caller's thread so a concurrent sync cannot repost them. */
+    @Synchronized
+    fun markDismissed(ids: Set<Long>) {
+        state.mark(ids)
+        ids.forEach { manager.cancel(TAG_TIMER, notificationId(it)) }
+    }
+
+    @Synchronized
+    fun persistDismissed() {
+        state.persist()
+    }
+
+    private fun persist() {
+        scope.launch(Dispatchers.IO) { persistDismissed() }
     }
 
     @SuppressLint("MissingPermission")
@@ -71,10 +109,11 @@ class AndroidTimerNotifier @Inject constructor(
         }
     }
 
-    private fun timerNotification(context: Context, view: RunningTimerView) =
-        NotificationCompat.Builder(context, NotificationChannels.TIMERS)
+    internal fun timerNotification(context: Context, view: RunningTimerView, promote: Boolean): Notification {
+        val notification = NotificationCompat.Builder(context, NotificationChannels.TIMERS)
             .setSmallIcon(R.drawable.ic_timer)
             .setColor(view.type.color)
+            .setColorized(false)
             .setContentTitle(view.type.name)
             .setContentText(
                 view.taskTitle?.takeIf { it.isNotBlank() }
@@ -91,10 +130,18 @@ class AndroidTimerNotifier @Inject constructor(
             .setGroup(GROUP)
             .setSortKey(view.timer.startedAt.toString().padStart(20, '0'))
             .setContentIntent(DeepLinks.openIntent(context, DeepLinks.trackerUri))
+            .setDeleteIntent(dismissIntent(listOf(view.timer.id)))
             .addAction(0, context.getString(R.string.notif_action_stop), stopIntent(view.timer.id))
             .build()
+        return if (Build.VERSION.SDK_INT >= 36 && promote && systemManager.canPostPromotedNotifications()) {
+            // SDK 36 supports the public extra but does not yet expose the builder shortcut.
+            Notification.Builder.recoverBuilder(context, notification)
+                .addExtras(Bundle().apply { putBoolean("android.requestPromotedOngoing", true) })
+                .build()
+        } else notification
+    }
 
-    private fun summary(context: Context, timers: List<RunningTimerView>) =
+    internal fun summary(context: Context, timers: List<RunningTimerView>) =
         NotificationCompat.Builder(context, NotificationChannels.TIMERS)
             .setSmallIcon(R.drawable.ic_timer)
             .setContentTitle(context.getString(R.string.notif_timers_summary, timers.size))
@@ -107,7 +154,16 @@ class AndroidTimerNotifier @Inject constructor(
             .setGroup(GROUP)
             .setGroupSummary(true)
             .setContentIntent(DeepLinks.openIntent(context, DeepLinks.trackerUri))
+            .setDeleteIntent(dismissIntent(timers.map { it.timer.id }))
             .build()
+
+    private fun dismissIntent(ids: List<Long>): PendingIntent {
+        val intent = Intent(context, TimerDismissReceiver::class.java)
+            .setAction(TimerDismissReceiver.ACTION_DISMISS)
+            .setData(Uri.parse("meolist://timer-dismiss/${ids.sorted().joinToString(",")}"))
+            .putExtra(TimerDismissReceiver.EXTRA_RUNNING_IDS, ids.toLongArray())
+        return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+    }
 
     private fun stopIntent(runningId: Long): PendingIntent {
         val intent = Intent(context, TimerActionReceiver::class.java)

@@ -5,9 +5,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,6 +34,13 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlin.math.min
+import kotlin.math.sqrt
+
+fun donutCenterSide(diameter: Float, thickness: Float, padding: Float = 4f): Float =
+    ((diameter / 2f - thickness * 1.25f - padding).coerceAtLeast(0f)) * sqrt(2f)
+
+fun donutDiameterForCenter(side: Float, thickness: Float, padding: Float = 4f): Float =
+    side.coerceAtLeast(0f) * sqrt(2f) + 2f * (thickness * 1.25f + padding)
 
 /** One coloured share of a chart. */
 data class ChartSlice(val key: Long, val value: Float, val color: Color)
@@ -47,6 +57,7 @@ fun DonutChart(
     onSelect: (Long?) -> Unit = {},
     description: String = "",
     thickness: Dp = 28.dp,
+    centerPadding: Dp = 4.dp,
     center: @Composable () -> Unit = {},
 ) {
     val total = slices.sumOf { it.value.toDouble() }.toFloat()
@@ -55,12 +66,15 @@ fun DonutChart(
     val track = MaterialTheme.colorScheme.surfaceContainerHighest
     val gapColor = MaterialTheme.colorScheme.surface
 
-    Box(modifier.aspectRatio(1f), contentAlignment = Alignment.Center) {
+    BoxWithConstraints(modifier.aspectRatio(1f), contentAlignment = Alignment.Center) {
+        val centerSide = donutCenterSide(
+            min(maxWidth.value, maxHeight.value), thickness.value, centerPadding.value,
+        ).dp
         Canvas(
             Modifier
                 .matchParentSize()
                 .semantics { contentDescription = description }
-                .pointerInput(slices, total) {
+                .pointerInput(slices, total, selectedKey, thickness) {
                     detectTapGestures { pos ->
                         val c = Offset(size.width / 2f, size.height / 2f)
                         val outer = min(size.width, size.height) / 2f
@@ -85,6 +99,7 @@ fun DonutChart(
             val stroke = thickness.toPx()
             val boldStroke = stroke * 1.25f
             val diameter = min(size.width, size.height) - boldStroke
+            if (diameter <= 0f) return@Canvas
             val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
             val arcSize = Size(diameter, diameter)
             drawArc(track, 0f, 360f, false, topLeft, arcSize, style = Stroke(stroke))
@@ -102,7 +117,9 @@ fun DonutChart(
                 start += angle
             }
         }
-        center()
+        Box(Modifier.size(centerSide).clipToBounds(), contentAlignment = Alignment.Center) {
+            center()
+        }
     }
 }
 

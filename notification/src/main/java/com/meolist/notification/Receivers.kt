@@ -19,7 +19,9 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -39,6 +41,7 @@ interface NotificationEntryPoint {
     fun reminderNotifier(): ReminderNotifier
     fun timerSync(): TimerSync
     fun timerInteractor(): TimerInteractor
+    fun androidTimerNotifier(): AndroidTimerNotifier
 
     @ApplicationScope
     fun applicationScope(): CoroutineScope
@@ -65,10 +68,15 @@ object NotificationStartup {
     fun onAppStart(context: Context) {
         NotificationChannels.create(context)
         val entryPoint = context.notificationEntryPoint()
-        // Covers anything the system dropped: force-stops, missed broadcasts on restrictive ROMs.
         entryPoint.applicationScope().launch {
             entryPoint.reminderScheduler().rescheduleAll()
-            // Timer notifications are gone after a force-stop or an update; post them again.
+        }
+    }
+
+    fun onAppForeground(context: Context) {
+        val entryPoint = context.notificationEntryPoint()
+        // A deleteIntent can start the process too; only a foreground launch should restore timers.
+        entryPoint.applicationScope().launch {
             entryPoint.timerSync().sync()
         }
     }
@@ -140,6 +148,31 @@ class GoalAlarmReceiver : BroadcastReceiver() {
 
     companion object {
         const val ACTION_FIRE = "com.meolist.action.GOAL_ALARM"
+    }
+}
+
+class TimerDismissReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != ACTION_DISMISS) return
+        val ids = intent.getLongArrayExtra(EXTRA_RUNNING_IDS)?.filter { it > 0 }?.toSet().orEmpty()
+        if (ids.isEmpty()) return
+        // Register the dismissal before yielding so an in-flight sync cannot repost the notification.
+        val entryPoint = context.notificationEntryPoint()
+        entryPoint.androidTimerNotifier().markDismissed(ids)
+        val pending = goAsync()
+        entryPoint.applicationScope().launch {
+            try {
+                withContext(Dispatchers.IO) { entryPoint.androidTimerNotifier().persistDismissed() }
+                entryPoint.timerSync().sync()
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+
+    companion object {
+        const val ACTION_DISMISS = "com.meolist.action.TIMER_DISMISS"
+        const val EXTRA_RUNNING_IDS = "runningIds"
     }
 }
 

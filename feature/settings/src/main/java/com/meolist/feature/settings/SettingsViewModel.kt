@@ -11,6 +11,7 @@ import com.meolist.domain.backup.BackupSummary
 import com.meolist.domain.settings.AppPreferences
 import com.meolist.domain.settings.AppSettings
 import com.meolist.domain.settings.MonthChartStyle
+import com.meolist.domain.settings.StatsDefaultView
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
@@ -66,6 +67,8 @@ class SettingsViewModel @Inject constructor(
         update { it.copy(defaultReminderMinute = minute.coerceIn(0, 23 * 60 + 59)) }
 
     fun setMonthChartStyle(style: MonthChartStyle) = update { it.copy(monthChartStyle = style) }
+
+    fun setStatsDefaultView(view: StatsDefaultView) = update { it.copy(statsDefaultView = view) }
 
     fun consumeEvent() = local.update { it.copy(event = null) }
 

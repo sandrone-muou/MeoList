@@ -8,7 +8,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,13 +30,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Keyboard
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
@@ -48,7 +58,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -56,9 +65,15 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TimeInput
+import androidx.compose.material3.TimePickerLayoutType
 import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -86,6 +101,7 @@ import com.meolist.core.ui.currentLocale
 import com.meolist.core.ui.rememberReminderPermissionState
 import com.meolist.core.ui.timeLabel
 import com.meolist.domain.settings.MonthChartStyle
+import com.meolist.domain.settings.StatsDefaultView
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -107,10 +123,11 @@ fun SettingsRoute(
 
     var choosingLanguage by remember { mutableStateOf(false) }
     var choosingChartStyle by remember { mutableStateOf(false) }
+    var choosingStatsDefault by rememberSaveable { mutableStateOf(false) }
     var choosingIgnore by remember { mutableStateOf(false) }
     var choosingUrgent by remember { mutableStateOf(false) }
     var choosingWeekStart by remember { mutableStateOf(false) }
-    var choosingReminderTime by remember { mutableStateOf(false) }
+    var choosingReminderTime by rememberSaveable { mutableStateOf(false) }
 
     val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         uri?.let(vm::writeBackup)
@@ -192,6 +209,14 @@ fun SettingsRoute(
                         subtitle = stringResource(R.string.settings_month_chart_desc),
                         value = chartStyleLabel(settings.monthChartStyle),
                         onClick = { choosingChartStyle = true },
+                    )
+                    RowDivider()
+                    ChoiceRow(
+                        icon = Icons.Outlined.DateRange,
+                        title = stringResource(R.string.settings_stats_default_view),
+                        subtitle = stringResource(R.string.settings_stats_default_view_desc),
+                        value = statsDefaultLabel(settings.statsDefaultView),
+                        onClick = { choosingStatsDefault = true },
                     )
                 }
             }
@@ -335,6 +360,15 @@ fun SettingsRoute(
             onDismiss = { choosingChartStyle = false },
         )
     }
+    if (choosingStatsDefault) {
+        ChoiceDialog(
+            title = stringResource(R.string.settings_stats_default_view),
+            options = StatsDefaultView.entries.map { it to statsDefaultLabel(it) },
+            selected = settings.statsDefaultView,
+            onSelect = { vm.setStatsDefaultView(it); choosingStatsDefault = false },
+            onDismiss = { choosingStatsDefault = false },
+        )
+    }
     if (choosingIgnore) {
         ChoiceDialog(
             title = stringResource(R.string.settings_ignore_short),
@@ -402,6 +436,17 @@ private fun languageLabel(language: AppLanguage?): String = stringResource(
 @Composable
 private fun chartStyleLabel(style: MonthChartStyle): String = stringResource(
     if (style == MonthChartStyle.HEATMAP) R.string.settings_chart_heatmap else R.string.settings_chart_bars,
+)
+
+@Composable
+private fun statsDefaultLabel(view: StatsDefaultView): String = stringResource(
+    when (view) {
+        StatsDefaultView.DAY -> R.string.settings_stats_day
+        StatsDefaultView.WEEK -> R.string.settings_stats_week
+        StatsDefaultView.MONTH -> R.string.settings_stats_month
+        StatsDefaultView.YEAR -> R.string.settings_stats_year
+        StatsDefaultView.LAST_USED -> R.string.settings_stats_last_used
+    },
 )
 
 @Composable
@@ -551,7 +596,7 @@ private fun <T> ChoiceDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 options.forEach { (value, label) ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -577,36 +622,79 @@ private fun <T> ChoiceDialog(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+internal fun preferReminderTimeInput(width: Float, height: Float, fontScale: Float): Boolean =
+    width < 360f || height < 560f || fontScale > 1.15f
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun ReminderTimeDialog(
+internal fun ReminderTimeDialog(
     initialMinute: Int,
     onConfirm: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
+    val keyboard = LocalSoftwareKeyboardController.current
     val picker = rememberTimePickerState(
         initialHour = initialMinute / 60,
         initialMinute = initialMinute % 60,
         is24Hour = DateFormat.is24HourFormat(context),
     )
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = MaterialTheme.shapes.extraLarge, tonalElevation = 6.dp) {
-            Column(Modifier.padding(24.dp)) {
-                Text(
-                    stringResource(R.string.settings_default_reminder),
-                    style = MaterialTheme.typography.headlineSmall,
-                )
-                Spacer(Modifier.height(16.dp))
-                TimePicker(state = picker)
-                Spacer(Modifier.height(4.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss) {
-                        Text(stringResource(com.meolist.core.R.string.core_cancel))
+    var dialChoice by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        BoxWithConstraints(Modifier.imePadding().padding(12.dp), contentAlignment = Alignment.Center) {
+            val preferInput = preferReminderTimeInput(maxWidth.value, maxHeight.value, LocalDensity.current.fontScale)
+            val showDial = dialChoice ?: !preferInput
+            Surface(
+                modifier = Modifier.widthIn(max = 440.dp).fillMaxWidth(),
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp,
+            ) {
+                Column {
+                    Column(
+                        Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(20.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.settings_default_reminder),
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                        Spacer(Modifier.height(20.dp))
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            Box(Modifier.horizontalScroll(rememberScrollState())) {
+                                if (showDial) {
+                                    TimePicker(state = picker, layoutType = TimePickerLayoutType.Vertical)
+                                } else {
+                                    TimeInput(state = picker)
+                                }
+                            }
+                        }
                     }
-                    Spacer(Modifier.width(4.dp))
-                    TextButton(onClick = { onConfirm(picker.hour * 60 + picker.minute) }) {
-                        Text(stringResource(com.meolist.core.R.string.core_ok))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        IconButton(onClick = {
+                            keyboard?.hide()
+                            dialChoice = !showDial
+                        }) {
+                            Icon(
+                                if (showDial) Icons.Outlined.Keyboard else Icons.Outlined.Schedule,
+                                stringResource(
+                                    if (showDial) R.string.settings_time_switch_input else R.string.settings_time_switch_picker,
+                                ),
+                            )
+                        }
+                        Spacer(Modifier.weight(1f))
+                        TextButton(onClick = onDismiss) {
+                            Text(stringResource(com.meolist.core.R.string.core_cancel))
+                        }
+                        TextButton(onClick = { onConfirm(picker.hour * 60 + picker.minute) }) {
+                            Text(stringResource(com.meolist.core.R.string.core_ok))
+                        }
                     }
                 }
             }

@@ -23,8 +23,8 @@ android {
         applicationId = "com.meolist.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.1.3"
+        versionCode = 4
+        versionName = "0.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -85,4 +85,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.process)
 
     testImplementation(libs.junit)
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }

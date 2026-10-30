@@ -14,6 +14,7 @@ import com.meolist.core.locale.LanguageStore
 import com.meolist.core.theme.MeoTheme
 import com.meolist.notification.DeepLink
 import com.meolist.notification.DeepLinks
+import com.meolist.notification.NotificationStartup
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -37,6 +38,13 @@ class MainActivity : ComponentActivity() {
                 MeoAppRoot(deepLink = deepLink, onDeepLinkHandled = { deepLink = null })
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Also runs when the notification permission dialog closes, so a freshly allowed
+        // permission picks up timers that were already running.
+        NotificationStartup.onAppForeground(this)
     }
 
     override fun onNewIntent(intent: Intent) {

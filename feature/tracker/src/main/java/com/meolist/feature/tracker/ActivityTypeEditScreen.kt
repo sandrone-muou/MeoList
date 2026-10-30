@@ -1,13 +1,10 @@
 package com.meolist.feature.tracker
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,7 +40,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -54,10 +50,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.meolist.core.navigation.Routes
 import com.meolist.core.ui.ActivityIcons
+import com.meolist.core.ui.ActivityPalette
 import com.meolist.core.ui.ColorPicker
 import com.meolist.core.ui.ConfirmDialog
 import com.meolist.core.ui.MeoIconPicker
-import com.meolist.core.ui.MeoPalette
 import com.meolist.core.ui.accentColor
 import com.meolist.core.ui.components.MeoScaffold
 import com.meolist.core.ui.components.rememberBackGuard
@@ -78,7 +74,7 @@ import kotlinx.coroutines.launch
 
 data class TypeEditState(
     val loaded: Boolean = false,
-    val type: ActivityType = ActivityType(name = "", icon = ActivityIcons.DEFAULT, color = MeoPalette.default),
+    val type: ActivityType = ActivityType(name = "", icon = ActivityIcons.DEFAULT, color = ActivityPalette.default),
     /** Target seconds per period; absent means no goal. */
     val goals: Map<GoalPeriod, Long> = emptyMap(),
     /** Snapshot at load time; any difference means unsaved edits. */
@@ -102,8 +98,7 @@ class ActivityTypeEditViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             if (typeId == 0L) {
-                val count = types.getTypes().size
-                val fresh = ActivityType(name = "", icon = ActivityIcons.DEFAULT, color = MeoPalette.colors[count % MeoPalette.colors.size])
+                val fresh = ActivityType(name = "", icon = ActivityIcons.DEFAULT, color = ActivityPalette.default)
                 _state.value = TypeEditState(
                     loaded = true,
                     type = fresh,
@@ -162,7 +157,7 @@ class ActivityTypeEditViewModel @Inject constructor(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityTypeEditRoute(onBack: () -> Unit, vm: ActivityTypeEditViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -215,7 +210,7 @@ fun ActivityTypeEditRoute(onBack: () -> Unit, vm: ActivityTypeEditViewModel = hi
             val color = accentColor(state.type.color)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(48.dp).clip(CircleShape).background(color), contentAlignment = Alignment.Center) {
-                    Icon(ActivityIcons.of(state.type.icon), null, tint = color.readableOn())
+                    Icon(ActivityIcons.of(state.type.icon), null, tint = color.readableOn(MaterialTheme.colorScheme.surface))
                 }
                 Spacer(Modifier.width(16.dp))
                 OutlinedTextField(
@@ -228,7 +223,11 @@ fun ActivityTypeEditRoute(onBack: () -> Unit, vm: ActivityTypeEditViewModel = hi
                 )
             }
             SectionTitle(stringResource(R.string.tracker_type_color))
-            ColorPicker(selected = state.type.color, onSelect = { c -> vm.update { it.copy(color = c) } })
+            ColorPicker(
+                selected = state.type.color,
+                onSelect = { c -> vm.update { it.copy(color = c) } },
+                colors = ActivityPalette.colors + listOfNotNull(state.original?.color),
+            )
             SectionTitle(stringResource(R.string.tracker_type_icon))
             MeoIconPicker(
                 selected = state.type.icon,
