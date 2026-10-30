@@ -69,5 +69,5 @@
     <string name="settings_about_version">MeoList %1$s</string>
     <string name="settings_about_author">Made by sandrone-muou</string>
     <string name="settings_about_license">Apache License 2.0</string>
-    <string name="settings_app_version">0.2.0</string>
+    <string name="settings_app_version">0.2.1</string>
 </resources>
