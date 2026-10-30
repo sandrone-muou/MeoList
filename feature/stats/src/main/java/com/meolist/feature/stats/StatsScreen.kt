@@ -68,6 +68,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.meolist.core.theme.Meo
 import com.meolist.core.ui.accentColor
 import com.meolist.core.ui.currentLocale
 import com.meolist.core.ui.durationText
@@ -334,9 +335,9 @@ fun StatsRoute(onBack: () -> Unit, vm: StatsViewModel = hiltViewModel()) {
                 EmptyStats(Modifier.padding(vertical = 48.dp))
             } else {
                 SummaryCard(state)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Meo.layout.listGap))
                 PieCard(state, stats, types, vm)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Meo.layout.listGap))
                 if (state.period == StatsPeriod.MONTH && state.monthChartStyle == MonthChartStyle.HEATMAP) {
                     MonthHeatmapCard(
                         state = state,
@@ -356,7 +357,7 @@ fun StatsRoute(onBack: () -> Unit, vm: StatsViewModel = hiltViewModel()) {
                         locale = locale,
                     )
                 }
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(16.dp))
             }
         }
     }
@@ -366,11 +367,12 @@ fun StatsRoute(onBack: () -> Unit, vm: StatsViewModel = hiltViewModel()) {
 @Composable
 private fun SummaryCard(state: StatsState) {
     val stats = state.stats ?: return
+    val layout = Meo.layout
     Card(
         Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Column(Modifier.padding(horizontal = layout.cardPadH, vertical = layout.cardPadV)) {
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -389,34 +391,50 @@ private fun SummaryCard(state: StatsState) {
                     modifier = Modifier.align(Alignment.Bottom),
                 )
             }
-            Spacer(Modifier.height(10.dp))
-            if (LocalDensity.current.fontScale > 1.15f) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SummaryValue(stringResource(R.string.stats_daily_average), durationText(stats.dailyAverageMs))
-                    SummaryValue(stringResource(R.string.stats_active_days), stats.activeDays.toString())
-                    SummaryValue(stringResource(R.string.stats_tasks_done), state.completedTasks.toString())
-                }
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    SummaryValue(stringResource(R.string.stats_daily_average), durationText(stats.dailyAverageMs), Modifier.weight(1f))
-                    SummaryDivider()
-                    SummaryValue(stringResource(R.string.stats_active_days), stats.activeDays.toString(), Modifier.weight(1f))
-                    SummaryDivider()
-                    SummaryValue(stringResource(R.string.stats_tasks_done), state.completedTasks.toString(), Modifier.weight(1f))
+            Spacer(Modifier.height(layout.listGap))
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val gap = 8.dp
+                if (summaryColumns(maxWidth.value, LocalDensity.current.fontScale) == 3) {
+                    Row(verticalAlignment = Alignment.Top) {
+                        SummaryValue(stringResource(R.string.stats_daily_average), durationText(stats.dailyAverageMs), Modifier.weight(1f))
+                        SummaryDivider()
+                        SummaryValue(stringResource(R.string.stats_active_days), stats.activeDays.toString(), Modifier.weight(1f))
+                        SummaryDivider()
+                        SummaryValue(stringResource(R.string.stats_tasks_done), state.completedTasks.toString(), Modifier.weight(1f))
+                    }
+                } else {
+                    val itemWidth = (maxWidth - gap) / 2
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(gap),
+                        verticalArrangement = Arrangement.spacedBy(gap),
+                    ) {
+                        SummaryValue(stringResource(R.string.stats_daily_average), durationText(stats.dailyAverageMs), Modifier.width(itemWidth))
+                        SummaryValue(stringResource(R.string.stats_active_days), stats.activeDays.toString(), Modifier.width(itemWidth))
+                        SummaryValue(stringResource(R.string.stats_tasks_done), state.completedTasks.toString(), Modifier.width(itemWidth))
+                    }
                 }
             }
         }
     }
 }
 
+internal fun summaryColumns(widthDp: Float, fontScale: Float): Int =
+    if (widthDp >= 300f * fontScale.coerceAtLeast(1f)) 3 else 2
+
 @Composable
 private fun SummaryValue(label: String, value: String, modifier: Modifier = Modifier) {
     Column(modifier) {
-        Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Text(
+            value,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 2,
+        )
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
         )
     }
 }
@@ -509,7 +527,7 @@ private fun PieCard(
         Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Column(Modifier.padding(horizontal = Meo.layout.cardPadH, vertical = Meo.layout.cardPadV)) {
             Text(stringResource(R.string.stats_by_activity), style = MaterialTheme.typography.titleSmall)
             if (state.selectedType != null) {
                 Text(
@@ -522,10 +540,10 @@ private fun PieCard(
                         .padding(vertical = 4.dp),
                 )
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val centerFits = requiredDiameter <= maxWidth
-                val diameter = maxOf(144.dp, requiredDiameter).coerceAtMost(maxWidth)
+                val diameter = maxOf(Meo.layout.donutMin, requiredDiameter).coerceAtMost(maxWidth)
                 val ring: @Composable () -> Unit = {
                     DonutChart(
                         slices = slices,
@@ -551,7 +569,7 @@ private fun PieCard(
                             Spacer(Modifier.height(8.dp))
                             totalContent()
                         }
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(8.dp))
                         ActivityLegend(stats, types, state.selectedType, vm::selectType, Modifier.fillMaxWidth())
                     }
                 }
@@ -582,7 +600,7 @@ private fun ActivityLegend(
                     .background(
                         if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
                     )
-                    .padding(horizontal = 4.dp, vertical = 3.dp),
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
             ) {
                 Box(
                     Modifier
@@ -651,7 +669,7 @@ private fun BarCard(
         Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(horizontal = Meo.layout.cardPadH, vertical = Meo.layout.cardPadV)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(stringResource(title), style = MaterialTheme.typography.titleSmall)
                 if (selectedType != null) {
@@ -666,13 +684,14 @@ private fun BarCard(
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             StackedBarChart(
                 bars = bars,
                 maxLabel = durationText(visibleMax),
                 selectedIndex = selectedBar.takeIf { it in bars.indices },
                 onSelect = onSelectBar,
                 description = stringResource(R.string.stats_bar_desc),
+                height = Meo.layout.barChartHeight,
             )
             val info = bars.getOrNull(selectedBar)
             if (info != null) {
@@ -720,14 +739,14 @@ private fun MonthHeatmapCard(
     val weekdayLabels = (0 until 7).map {
         state.firstDayOfWeek.plus(it.toLong()).getDisplayName(TextStyle.NARROW, locale)
     }
-    val cellHeight = 36.dp
-    val gap = 4.dp
+    val cellHeight = Meo.layout.heatmapCell
+    val gap = Meo.layout.heatmapGap
 
     Card(
         Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Column(Modifier.padding(horizontal = Meo.layout.cardPadH, vertical = Meo.layout.cardPadV)) {
             Text(stringResource(R.string.stats_by_day), style = MaterialTheme.typography.titleSmall)
             if (selectedType != null) {
                 Text(
@@ -771,7 +790,7 @@ private fun MonthHeatmapCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
                 weekdayLabels.forEach { label ->
                     Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
@@ -783,7 +802,7 @@ private fun MonthHeatmapCard(
                     }
                 }
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(4.dp))
             Column(verticalArrangement = Arrangement.spacedBy(gap)) {
                 repeat(weekRows) { row ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
@@ -855,7 +874,7 @@ private fun MonthHeatmapCard(
                     }
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val day = selectedDay
                 if (day != null) {

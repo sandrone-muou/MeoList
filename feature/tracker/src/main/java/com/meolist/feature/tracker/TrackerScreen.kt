@@ -177,8 +177,8 @@ fun TrackerRoute(
                     top = Meo.spacing.xs,
                     bottom = Meo.spacing.bottomContent,
                 ),
-                horizontalArrangement = Arrangement.spacedBy(Meo.spacing.md),
-                verticalArrangement = Arrangement.spacedBy(Meo.spacing.md),
+                horizontalArrangement = Arrangement.spacedBy(Meo.layout.trackerGap),
+                verticalArrangement = Arrangement.spacedBy(Meo.layout.trackerGap),
                 modifier = Modifier.padding(padding).fillMaxSize(),
             ) {
                 val runningCards = state.cards.filter { it.running != null }
@@ -301,7 +301,7 @@ private fun TypeCardView(
                 } else Modifier,
             ),
     ) {
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(Meo.spacing.md)) {
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(Meo.layout.trackerPad)) {
             val textConstraints = Constraints(maxWidth = constraints.maxWidth)
             val titleWidth = remember(measurer, titleStyle, card.type.name) {
                 measurer.measure(card.type.name, titleStyle, softWrap = false).size.width
@@ -361,7 +361,7 @@ private fun TypeCardView(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
-                Spacer(Modifier.height(Meo.spacing.sm))
+                Spacer(Modifier.height(6.dp))
                 Text(
                     if (running != null) elapsedText(now - running.startedAt) else durationText(periodMs(GoalPeriod.DAY)),
                     style = durationStyle,
@@ -392,13 +392,13 @@ private fun TypeCardView(
                     val goalHeight = remember(measurer, goalStyle, goalSample, textConstraints) {
                         measurer.measure(goalSample, goalStyle, constraints = textConstraints).size.height
                     }
-                    Spacer(Modifier.height(Meo.spacing.sm))
+                    Spacer(Modifier.height(6.dp))
                     MeoProgressBar(
                         progress = (done.toFloat() / target).coerceIn(0f, 1f),
                         color = color,
                         height = 6.dp,
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(3.dp))
                     Text(
                         stringResource(goalLabel(goal.period), durationText(done), durationText(target)),
                         style = goalStyle,
@@ -406,7 +406,7 @@ private fun TypeCardView(
                         modifier = Modifier.fillMaxWidth().heightIn(min = with(density) { goalHeight.toDp() }),
                     )
                 }
-                Spacer(Modifier.height(Meo.spacing.md))
+                Spacer(Modifier.height(8.dp))
                 if (running != null) {
                     FilledTonalButton(
                         onClick = {
@@ -417,7 +417,7 @@ private fun TypeCardView(
                             containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
                             contentColor = MaterialTheme.colorScheme.primary,
                         ),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
                         interactionSource = interaction,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp).scale(buttonScale),
                     ) {
@@ -435,7 +435,7 @@ private fun TypeCardView(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary,
                         ),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
                         interactionSource = interaction,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp).scale(buttonScale),
                     ) {
@@ -468,7 +468,7 @@ private fun RunningHero(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         modifier = modifier.fillMaxWidth(),
     ) {
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(Meo.spacing.lg)) {
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(12.dp)) {
             val sideBySide = maxWidth >= minimumTileWidth * 2 + Meo.spacing.sm
             val scrollingTileWidth = maxOf(172.dp * LocalDensity.current.fontScale, minimumTileWidth).coerceAtMost(maxWidth)
             Column {
@@ -487,7 +487,7 @@ private fun RunningHero(
                         Text(stringResource(R.string.tracker_stop_all))
                     }
                 }
-                Spacer(Modifier.height(Meo.spacing.sm))
+                Spacer(Modifier.height(6.dp))
                 if (cards.size <= 2 && sideBySide) {
                     Row(horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm)) {
                         cards.forEach { card ->

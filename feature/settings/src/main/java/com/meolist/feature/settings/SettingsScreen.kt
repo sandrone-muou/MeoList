@@ -179,9 +179,9 @@ fun SettingsRoute(
                 start = com.meolist.core.theme.Meo.spacing.screen,
                 end = com.meolist.core.theme.Meo.spacing.screen,
                 top = 4.dp,
-                bottom = 32.dp,
+                bottom = 24.dp,
             ),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(padding).fillMaxSize(),
         ) {
             if (state.busy) {
@@ -455,7 +455,7 @@ private fun SectionLabel(text: String) {
         text,
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 4.dp, top = 8.dp),
+        modifier = Modifier.padding(start = 4.dp, top = 6.dp),
     )
 }
 

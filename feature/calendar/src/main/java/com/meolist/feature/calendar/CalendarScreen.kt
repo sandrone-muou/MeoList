@@ -3,6 +3,7 @@ package com.meolist.feature.calendar
 import com.meolist.core.ui.accentColor
 import com.meolist.core.ui.components.MeoScaffold
 import com.meolist.core.ui.readableOn
+import com.meolist.core.theme.Meo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -269,7 +270,7 @@ fun CalendarRoute(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             ) {
                 IconButton(onClick = { vm.move(-1) }, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, stringResource(R.string.calendar_previous))
@@ -295,22 +296,22 @@ fun CalendarRoute(
                 Surface(
                     shape = MaterialTheme.shapes.large,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                 ) {
-                    Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp)) {
+                    Column(Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
                         MonthGrid(state, onSelect = vm::select)
-                        Legend(Modifier.padding(top = 10.dp, start = 4.dp, end = 4.dp))
+                        Legend(Modifier.padding(top = 6.dp, start = 4.dp, end = 4.dp))
                     }
                 }
             } else {
                 Surface(
                     shape = MaterialTheme.shapes.large,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                 ) {
-                    Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp)) {
+                    Column(Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
                         WeekChart(state, onSelect = vm::select)
-                        Legend(Modifier.padding(top = 10.dp, start = 4.dp, end = 4.dp))
+                        Legend(Modifier.padding(top = 6.dp, start = 4.dp, end = 4.dp))
                     }
                 }
             }
@@ -328,7 +329,7 @@ fun CalendarRoute(
                     onOpenCountdown = onOpenCountdown,
                 )
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
@@ -382,7 +383,7 @@ private fun ModeSwitch(mode: CalendarMode, onSelect: (CalendarMode) -> Unit) {
 private fun MonthGrid(state: CalendarState, onSelect: (LocalDate) -> Unit) {
     val locale = currentLocale()
     Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+        Row(Modifier.fillMaxWidth().padding(bottom = 2.dp)) {
             (0 until 7).forEach { i ->
                 val day = DayOfWeek.of((state.firstDayOfWeek.value - 1 + i) % 7 + 1)
                 Text(
@@ -433,7 +434,7 @@ private fun DayCell(
 
     Box(
         modifier
-            .height(44.dp)
+            .height(Meo.layout.calendarCell)
             .clickable(enabled = inMonth) { onSelect(date) },
     ) {
         Box(
@@ -513,7 +514,7 @@ private fun Legend(modifier: Modifier = Modifier) {
 private fun WeekChart(state: CalendarState, onSelect: (LocalDate) -> Unit) {
     val locale = currentLocale()
     val axisWidth = 22.dp
-    val chartHeight = 236.dp
+    val chartHeight = Meo.layout.weekChartHeight
     val typeColors = state.types.associate { it.id to accentColor(it.color) }
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth()) {
@@ -554,7 +555,7 @@ private fun WeekChart(state: CalendarState, onSelect: (LocalDate) -> Unit) {
                 }
             }
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(4.dp))
         Row(Modifier.fillMaxWidth()) {
             TimeAxis(Modifier.width(axisWidth).height(chartHeight))
             state.days.forEach { day ->
@@ -636,7 +637,7 @@ private fun Agenda(
     onOpenCountdown: (Long) -> Unit,
 ) {
     val locale = currentLocale()
-    Column(Modifier.fillMaxWidth().padding(top = 20.dp)) {
+    Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 longDate(day.date, locale),
@@ -757,7 +758,7 @@ private fun AgendaSection(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(top = 16.dp, bottom = 6.dp, start = 4.dp),
+        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp, start = 4.dp),
     ) {
         Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
         Spacer(Modifier.width(6.dp))
@@ -774,7 +775,7 @@ private fun AgendaSection(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), content = content)
+        Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), content = content)
     }
 }
 
@@ -834,7 +835,7 @@ private fun HabitAgendaRow(habit: Habit, done: Boolean, onOpen: () -> Unit, onTo
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.small)
             .clickable(onClick = onOpen)
-            .padding(vertical = 6.dp),
+            .padding(vertical = 4.dp),
     ) {
         Box(
             Modifier.size(28.dp).clip(CircleShape).background(accent.copy(alpha = 0.14f)),
@@ -877,7 +878,7 @@ private fun CountdownAgendaRow(countdown: Countdown, today: LocalDate, onOpen: (
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.small)
             .clickable(onClick = onOpen)
-            .padding(vertical = 6.dp),
+            .padding(vertical = 4.dp),
     ) {
         Box(
             Modifier.size(28.dp).clip(CircleShape).background(accent.copy(alpha = 0.14f)),
@@ -910,7 +911,7 @@ private fun RecordAgendaRow(record: com.meolist.domain.tracker.TimeRecord, type:
     val zone = java.time.ZoneId.systemDefault()
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {
         Box(
             Modifier.size(28.dp).clip(CircleShape).background(accent.copy(alpha = 0.14f)),

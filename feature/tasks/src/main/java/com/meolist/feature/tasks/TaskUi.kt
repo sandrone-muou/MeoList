@@ -141,11 +141,11 @@ internal fun TaskRow(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+            .padding(start = 4.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TaskCheckbox(task.isDone, task.priority, onToggle, enabled = !task.isDeleted)
-        Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
+        Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
             Text(
                 text = task.title,
                 style = MaterialTheme.typography.bodyLarge,
@@ -158,7 +158,6 @@ internal fun TaskRow(
                 item.tags.isNotEmpty() || task.note.isNotBlank() || repeats || hasReminder || isTiming
             if (hasMeta) {
                 Row(
-                    modifier = Modifier.padding(top = 2.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

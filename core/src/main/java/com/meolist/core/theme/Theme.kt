@@ -9,7 +9,9 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 
 private val LightColors = lightColorScheme(
@@ -100,8 +102,13 @@ fun MeoTheme(
         darkTheme -> DarkColors
         else -> LightColors
     }
+    val configuration = LocalConfiguration.current
+    val layout = remember(configuration.screenWidthDp) {
+        MeoLayout.forWidth(configuration.screenWidthDp)
+    }
     CompositionLocalProvider(
         LocalSpacing provides MeoSpacing(),
+        LocalMeoLayout provides layout,
         LocalExtendedColors provides if (darkTheme) DarkExtendedColors else LightExtendedColors,
     ) {
         MaterialTheme(

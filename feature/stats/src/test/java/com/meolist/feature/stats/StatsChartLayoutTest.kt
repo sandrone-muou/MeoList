@@ -63,4 +63,20 @@ class StatsChartLayoutTest {
         }
         assertEquals(listOf("0m"), statsDurationGroups(-1, "h", "m"))
     }
+
+    @Test
+    fun summaryMetricsKeepThreeColumnsWhenWideEnough() {
+        assertEquals(3, summaryColumns(349f, 1f))
+        assertEquals(3, summaryColumns(300f, 1f))
+        assertEquals(2, summaryColumns(299f, 1f))
+        assertEquals(2, summaryColumns(264f, 1f))
+    }
+
+    @Test
+    fun summaryMetricsDropToTwoColumnsAtLargeFonts() {
+        assertEquals(2, summaryColumns(349f, 1.3f))
+        assertEquals(2, summaryColumns(389f, 1.3f))
+        assertEquals(3, summaryColumns(390f, 1.3f))
+        assertEquals(3, summaryColumns(600f, 1.3f))
+    }
 }

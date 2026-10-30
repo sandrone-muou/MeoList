@@ -257,7 +257,7 @@ private fun TaskGroupsList(
             start = Meo.spacing.screen,
             end = Meo.spacing.screen,
             top = contentPadding.calculateTopPadding(),
-            bottom = 96.dp,
+            bottom = Meo.layout.listBottom,
         ),
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -374,7 +374,7 @@ private fun TaskRowDivider() {
 private fun WorkloadCard(state: TasksUiState) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(top = Meo.spacing.sm, bottom = Meo.spacing.sm),
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 4.dp),
     ) {
         WorkloadStat(
             value = state.counts[TaskFilter.Today.key()] ?: 0,
@@ -434,7 +434,7 @@ private fun QuickFilters(state: TasksUiState, onSelect: (TaskFilter) -> Unit) {
     )
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
-        contentPadding = PaddingValues(top = Meo.spacing.sm, bottom = Meo.spacing.sm),
+        contentPadding = PaddingValues(top = 4.dp, bottom = 4.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         items(filters) { filter ->
@@ -448,7 +448,7 @@ private fun QuickFilters(state: TasksUiState, onSelect: (TaskFilter) -> Unit) {
                     .clip(CircleShape)
                     .background(background)
                     .clickable { onSelect(filter) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
             ) {
                 Text(
                     filterTitle(filter, state),
@@ -540,7 +540,7 @@ private fun SectionHeader(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = expandable, onClick = onClick)
-            .padding(start = 4.dp, end = 4.dp, top = 20.dp, bottom = 6.dp),
+            .padding(start = 4.dp, end = 4.dp, top = Meo.layout.sectionTop, bottom = Meo.layout.sectionBottom),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

@@ -232,9 +232,9 @@ fun FarmRoute(
                 start = Meo.spacing.screen,
                 end = Meo.spacing.screen,
                 top = Meo.spacing.xs,
-                bottom = Meo.spacing.bottomContent,
+                bottom = Meo.layout.listBottom,
             ),
-            verticalArrangement = Arrangement.spacedBy(Meo.spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Meo.layout.listGap),
             modifier = Modifier.padding(padding).fillMaxSize(),
         ) {
             item {
@@ -349,7 +349,7 @@ private fun FarmScene(
                 ),
         ) {
             FarmBackdrop(Modifier.matchParentSize())
-            Column(Modifier.fillMaxWidth().padding(Meo.spacing.lg)) {
+            Column(Modifier.fillMaxWidth().padding(12.dp)) {
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm),
                     verticalArrangement = Arrangement.spacedBy(Meo.spacing.xs),
@@ -394,9 +394,9 @@ private fun FarmScene(
                         }
                     }
                 }
-                Spacer(Modifier.height(Meo.spacing.md))
+                Spacer(Modifier.height(8.dp))
                 (0 until FarmRules.MAX_PLOTS).chunked(3).forEachIndexed { index, slots ->
-                    if (index > 0) Spacer(Modifier.height(Meo.spacing.sm))
+                    if (index > 0) Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm)) {
                         slots.forEach { slot ->
                             val plot = bySlot[slot]
@@ -492,11 +492,11 @@ private fun PlotTile(
     }
     Column(
         modifier = modifier
-            .heightIn(min = 112.dp)
+            .heightIn(min = Meo.layout.plotTileMin)
             .clip(MaterialTheme.shapes.medium)
             .background(container)
             .clickable(onClick = onClick)
-            .padding(Meo.spacing.sm),
+            .padding(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -558,7 +558,7 @@ private fun PlotTile(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
-                Spacer(Modifier.height(Meo.spacing.xs))
+                Spacer(Modifier.height(2.dp))
                 CropGrowthBar(
                     progress = growth.toFloat() / plot.crop.need,
                     height = 6.dp,
@@ -589,7 +589,7 @@ private fun CompostCard(snapshot: FarmSnapshot) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(Meo.spacing.lg),
+            Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconBadge(
@@ -638,8 +638,8 @@ private fun AchievementsPreview(snapshot: FarmSnapshot, onOpen: () -> Unit) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(Meo.spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Meo.spacing.md),
+            Modifier.fillMaxWidth().padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             AchievementOverview(unlocked, total)
             if (next.isNotEmpty()) {
@@ -687,7 +687,7 @@ private fun HarvestList(harvests: List<HarvestRecord>) {
             if (index > 0) MeoListDivider()
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = Meo.spacing.lg, vertical = Meo.spacing.sm),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Meo.spacing.lg, vertical = 6.dp),
             ) {
                 CropArt(
                     crop = harvest.crop,

@@ -34,12 +34,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.meolist.app.R
 import com.meolist.core.navigation.Routes
 import com.meolist.core.theme.Meo
+import com.meolist.core.theme.MeoLayout
 import com.meolist.core.ui.components.IconBadge
 import com.meolist.core.ui.components.MeoScaffold
 import com.meolist.core.ui.components.SectionHeader
@@ -71,8 +74,8 @@ fun MoreScreen(onNavigate: (String) -> Unit) {
                 top = 0.dp,
                 bottom = Meo.spacing.bottomContent,
             ),
-            horizontalArrangement = Arrangement.spacedBy(Meo.spacing.md),
-            verticalArrangement = Arrangement.spacedBy(Meo.spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(padding).fillMaxSize(),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -96,13 +99,15 @@ fun MoreScreen(onNavigate: (String) -> Unit) {
 
 @Composable
 private fun ToolCard(entry: MoreEntry, onClick: () -> Unit) {
+    val compact = Meo.layout.compact
+    val cardHeight = moreCardHeight(compact, LocalDensity.current.fontScale)
     Card(
         onClick = onClick,
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        modifier = Modifier.fillMaxWidth().height(152.dp),
+        modifier = Modifier.fillMaxWidth().height(cardHeight),
     ) {
-        Column(Modifier.fillMaxSize().padding(Meo.spacing.lg)) {
+        Column(Modifier.fillMaxSize().padding(if (compact) 12.dp else Meo.spacing.lg)) {
             IconBadge(entry.icon, MaterialTheme.colorScheme.primary, size = 40.dp)
             Spacer(Modifier.weight(1f))
             Text(
@@ -121,6 +126,9 @@ private fun ToolCard(entry: MoreEntry, onClick: () -> Unit) {
         }
     }
 }
+
+internal fun moreCardHeight(compact: Boolean, fontScale: Float): Dp =
+    if (compact && fontScale <= 1.15f) MeoLayout.Compact.toolCardHeight else MeoLayout().toolCardHeight
 
 @Composable
 private fun SettingsCard(onClick: () -> Unit) {

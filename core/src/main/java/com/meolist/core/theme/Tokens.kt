@@ -105,6 +105,11 @@ object Meo {
         @ReadOnlyComposable
         get() = LocalSpacing.current
 
+    val layout: MeoLayout
+        @androidx.compose.runtime.Composable
+        @ReadOnlyComposable
+        get() = LocalMeoLayout.current
+
     val colors: MeoExtendedColors
         @androidx.compose.runtime.Composable
         @ReadOnlyComposable
