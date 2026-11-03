@@ -3,6 +3,7 @@ package com.meolist.data.di
 import android.content.Context
 import androidx.room.Room
 import com.meolist.data.db.MeoDatabase
+import com.meolist.data.db.MIGRATION_1_2
 import com.meolist.data.db.dao.ActivityTypeDao
 import com.meolist.data.db.dao.CountdownDao
 import com.meolist.data.db.dao.FarmDao
@@ -61,8 +62,7 @@ object DatabaseModule {
     @Singleton
     fun database(@ApplicationContext context: Context): MeoDatabase =
         Room.databaseBuilder(context, MeoDatabase::class.java, MeoDatabase.NAME)
-            // Schema v1 is frozen. Any later entity change must bump the version and ship a
-            // Migration together with a MigrationTestHelper test.
+            .addMigrations(MIGRATION_1_2)
             .build()
 
     @Provides fun taskDao(db: MeoDatabase): TaskDao = db.taskDao()

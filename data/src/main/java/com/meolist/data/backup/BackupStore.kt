@@ -16,6 +16,9 @@ import com.meolist.data.db.entity.ActivityGoalEntity
 import com.meolist.data.db.entity.ActivityTypeEntity
 import com.meolist.data.db.entity.CountdownEntity
 import com.meolist.data.db.entity.FarmPlotEntity
+import com.meolist.data.db.entity.FarmSlotEntity
+import com.meolist.data.db.entity.FarmStateEntity
+import com.meolist.data.db.entity.LegacyFarmArchiveEntity
 import com.meolist.data.db.entity.GoalReachedEntity
 import com.meolist.data.db.entity.HabitCheckInEntity
 import com.meolist.data.db.entity.HabitEntity
@@ -127,11 +130,14 @@ class BackupStore @Inject constructor(
             )
         },
         farmPlots = farmDao.getPlots().map { FarmPlotDto(it.id, it.slot, it.crop, it.plantedAt, it.harvestedAt) },
-        nutrients = farmDao.getNutrients().map { NutrientDto(it.sourceKey, it.plotId, it.amount, it.earnedAt) },
+        nutrients = farmDao.getNutrients().map { NutrientDto(it.sourceKey, it.plotId, it.amount, it.earnedAt, it.sequence) },
         harvests = farmDao.getHarvests().map {
             HarvestDto(it.id, it.crop, it.plotId, it.harvestedAt, it.nutrients)
         },
         achievements = farmDao.getAchievements().map { AchievementDto(it.key, it.unlockedAt) },
+        farmState = farmDao.getFarmState()?.let { FarmStateDto(it.rulesVersion, it.nextSequence) },
+        farmFields = farmDao.getFields().map { FarmFieldDto(it.slot, it.sourceCutoff) },
+        legacyFarm = farmDao.getLegacyArchive()?.let { BackupCodec.decodeLegacyFarm(it.payload) },
     )
 
     /**
@@ -140,8 +146,8 @@ class BackupStore @Inject constructor(
      */
     suspend fun restore(file: BackupFile) = withContext(Dispatchers.IO) {
         // clearAllTables is blocking and asserts that it is not on the main thread.
-        db.clearAllTables()
         db.withTransaction {
+            db.clearAllTables()
             // Parents before children, otherwise foreign keys reject the inserts.
             file.folders.forEach {
                 listDao.upsertFolder(ListFolderEntity(it.id, it.name, it.sortOrder))
@@ -262,7 +268,7 @@ class BackupStore @Inject constructor(
             }
             if (file.nutrients.isNotEmpty()) {
                 farmDao.upsertNutrients(
-                    file.nutrients.map { NutrientEntity(it.sourceKey, it.plotId, it.amount, it.earnedAt) },
+                    file.nutrients.map { NutrientEntity(it.sourceKey, it.plotId, it.amount, it.earnedAt, it.sequence) },
                 )
             }
             file.harvests.forEach {
@@ -270,6 +276,22 @@ class BackupStore @Inject constructor(
             }
             file.achievements.forEach {
                 farmDao.insertAchievement(AchievementEntity(it.key, it.unlockedAt))
+            }
+            if (file.format >= BackupFile.FORMAT) {
+                val state = requireNotNull(file.farmState)
+                farmDao.saveFarmState(FarmStateEntity(rulesVersion = state.rulesVersion, nextSequence = state.nextSequence))
+                file.farmFields.forEach { farmDao.saveField(FarmSlotEntity(it.slot, it.sourceCutoff)) }
+                file.legacyFarm?.let { archive ->
+                    farmDao.saveLegacyArchive(
+                        LegacyFarmArchiveEntity(
+                            archivedAt = archive.archivedAt,
+                            plotCount = archive.plots.size,
+                            harvestCount = archive.harvests.size,
+                            achievementCount = archive.achievements.size,
+                            payload = BackupCodec.encodeLegacyFarm(archive),
+                        ),
+                    )
+                }
             }
         }
     }

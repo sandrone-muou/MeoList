@@ -13,6 +13,10 @@
     <string name="farm_slot_locked_harvests">Harvest %1$d crops to unlock</string>
     <string name="farm_slot_locked_short">%1$d harvests</string>
     <string name="farm_plot_growth">%1$d / %2$d</string>
+    <string name="farm_slot_balance">Stored on this field: %1$d nutrients</string>
+    <string name="farm_parallel_title">Every field grows</string>
+    <string name="farm_parallel_body">Each unlocked field receives nutrients and keeps its own surplus.</string>
+    <string name="farm_legacy_summary">Previous farm archived · %1$d fields · %2$d harvests</string>
     <string name="farm_plot_harvest">Harvest</string>
     <string name="farm_plot_compost">Fertilize</string>
     <string name="farm_compost_title">Compost</string>

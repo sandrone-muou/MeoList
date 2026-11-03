@@ -40,7 +40,7 @@
     <string name="settings_default_reminder_desc">用于没有具体时间的全天事项。</string>
     <string name="settings_section_data">数据</string>
     <string name="settings_backup">备份数据</string>
-    <string name="settings_backup_desc">将全部清单、任务、记录、习惯和农场数据保存为 JSON。</string>
+    <string name="settings_backup_desc">将数据和农场进度保存为 JSON；旧版应用无法恢复此备份。</string>
     <string name="settings_restore">从备份恢复</string>
     <string name="settings_restore_desc">用备份文件替换全部数据。</string>
     <string name="settings_export_csv">导出记录 CSV</string>
@@ -66,5 +66,5 @@
     <string name="settings_about_version">MeoList %1$s</string>
     <string name="settings_about_author">作者：sandrone-muou</string>
     <string name="settings_about_license">Apache License 2.0</string>
-    <string name="settings_app_version">0.2.1</string>
+    <string name="settings_app_version">0.3.0</string>
 </resources>

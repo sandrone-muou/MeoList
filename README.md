@@ -20,7 +20,7 @@ focus time. Everything stays on the device.
 - **Countdowns**: count down or up, optional yearly repeat
 - **Statistics**: day / week / month / year views; month view switches between heatmap and bars; tracked time and completed tasks, with editable records
 - **Calendar + quadrants**: month / week views; the agenda separates tasks, habits, countdowns and timer records; tag-bound quadrants place tasks by tag, with priority / due-date classification for untagged tasks
-- **Timing farm**: focus time, completed tasks and habit check-ins become nutrients that grow crops, unlock harvests and achievements
+- **Timing farm**: focus time, completed tasks and habit check-ins award nutrients to every unlocked field, each with its own balance
 - **Data**: local-only storage; JSON backup / restore and CSV export; timing, reminder, week-start and month-chart preferences
 
 ## Download

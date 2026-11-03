@@ -51,6 +51,18 @@ object FarmRules {
     fun growth(plot: FarmPlot, entries: List<NutrientEntry>): Int =
         entries.filter { it.plotId == plot.id }.sumOf { it.amount }
 
+    fun growth(
+        plot: FarmPlot,
+        entries: List<NutrientEntry>,
+        sourceCutoff: Long,
+        spent: Long,
+    ): Int {
+        val earned = entries.asSequence()
+            .filter { it.sequence > sourceCutoff }
+            .sumOf { it.amount.toLong() }
+        return minOf(plot.crop.need.toLong(), (earned - spent).coerceAtLeast(0)).toInt()
+    }
+
     fun progress(plot: FarmPlot, entries: List<NutrientEntry>): Float =
         (growth(plot, entries).toFloat() / plot.crop.need).coerceIn(0f, 1f)
 
@@ -63,6 +75,13 @@ object FarmRules {
      */
     fun stage(plot: FarmPlot, entries: List<NutrientEntry>): Int {
         val fraction = growth(plot, entries).toFloat() / plot.crop.need
+        return stageForFraction(fraction)
+    }
+
+    fun stage(plot: FarmPlot, growth: Int): Int =
+        stageForFraction(growth.toFloat() / plot.crop.need)
+
+    private fun stageForFraction(fraction: Float): Int {
         return when {
             fraction < 0.05f -> 0
             fraction < 0.20f -> 1

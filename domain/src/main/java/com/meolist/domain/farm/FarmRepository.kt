@@ -7,25 +7,29 @@ interface FarmRepository {
     fun observeNutrients(): Flow<List<NutrientEntry>>
     fun observeHarvests(): Flow<List<HarvestRecord>>
     fun observeAchievements(): Flow<List<AchievementState>>
+    fun observeFields(): Flow<List<FarmField>>
+    fun observeFarmState(): Flow<FarmState?>
+    fun observeLegacyFarmSummary(): Flow<LegacyFarmSummary?>
 
     suspend fun getPlots(): List<FarmPlot>
     suspend fun getNutrients(): List<NutrientEntry>
     suspend fun getHarvests(): List<HarvestRecord>
+    suspend fun getFields(): List<FarmField>
+    suspend fun getFarmState(): FarmState?
+    suspend fun getLegacyFarmSummary(): LegacyFarmSummary?
+
+    /** Initializes new farms or archives and rebuilds a v1 farm atomically on first use. */
+    suspend fun initialize(initialSources: List<NutrientEntry>, at: Long): Boolean
 
     suspend fun insertPlot(plot: FarmPlot): Long
     suspend fun updatePlot(plot: FarmPlot)
 
     suspend fun insertHarvest(harvest: HarvestRecord): Long
 
-    /**
-     * Replaces the ledger: [entries] are written (existing rows updated), and the rows whose source
-     * keys are listed in [removedKeys] are deleted. Rows are assigned to plots, so callers keep the
-     * plot id of entries they carry over.
-     */
-    suspend fun saveNutrients(entries: List<NutrientEntry>, removedKeys: List<String>)
+    /** Replaces the source ledger while retaining removed keys as zero-value tombstones. */
+    suspend fun saveNutrients(entries: List<NutrientEntry>, nextSequence: Long)
 
-    /** Moves every entry still in the compost pool onto [plotId]. Returns the nutrients moved. */
-    suspend fun attachCompost(plotId: Long): Int
+    suspend fun saveField(field: FarmField)
 
     /** Remembers an unlocked badge. Returns false when it was already unlocked. */
     suspend fun unlockAchievement(key: String, at: Long): Boolean

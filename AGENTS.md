@@ -72,16 +72,16 @@ helpers are declared only in `core/navigation/Routes.kt`.
 
 ## Data and storage
 
-- Room database `meolist.db`, **version 1, frozen**. `exportSchema = true`; the schema is committed at
-  `data/schemas/1.json` and guarded by `data/src/androidTest/.../FrozenSchemaTest.kt`. Changing an
-  entity requires a version bump, a `Migration`, a new schema file and a migration test.
+- Room database `meolist.db`, currently **version 2**. `exportSchema = true`; schema snapshots are
+  committed under `data/schemas/com.meolist.data.db.MeoDatabase/`. Entity changes require a version
+  bump, a `Migration`, a new schema file and a migration test.
 - Settings live in DataStore (`meolist_prefs`) behind `AppPreferences`. The in-app language is the
   exception: it is kept in SharedPreferences `meolist_ui` so `attachBaseContext` can read it
   synchronously before Hilt or DataStore exist.
-- Backup: `BackupFile` JSON with `format = 1`, every field defaulted, unknown keys ignored, and the
-  `format` field required so an arbitrary JSON file cannot wipe data. `BackupStore.restore` clears
-  the tables, then re-inserts the file in one transaction, preserving ids and foreign links (parents
-  before children).
+- Backup: `BackupFile` JSON format 2, with format 1 import support, unknown keys ignored, and the
+  `format` field required so an arbitrary JSON file cannot wipe data. Format 2 preserves farm source
+  cutoffs and the archived legacy farm. `BackupStore.restore` clears and re-inserts the file in one
+  transaction, preserving ids and foreign links (parents before children).
 - CSV export of time records uses a UTF-8 BOM for Excel.
 - Compatibility rule: do not destroy user history. Prefer normalising on read — for example
   `HarvestRecord.absorbedNutrients` is `minOf(nutrients, crop.need)` computed in `FarmModels.kt`, so
@@ -99,9 +99,13 @@ helpers are declared only in `core/navigation/Routes.kt`.
 - **Repeating tasks**: completing one keeps a done copy (`repeatOriginId`) and advances the task to
   its next date; `RepeatAdvance` holds the state needed for undo.
 - **Farm**: records, task completions, habit check-ins and reached goals feed a nutrient ledger
-  (`FarmInteractor` / `FarmHook`). A focus stretch caps at 240 points, manual records count half,
-  plot limit grows 3 → 4 → 5 with harvests, growth has six art stages. `TaskCompletionHook` stops
-  linked timers; `FarmHook` recomputes nutrients.
+  (`FarmInteractor` / `FarmHook`). Every unlocked field earns the full value of each eligible
+  source; each field stores and spends its own balance. A field only receives sources recorded
+  after its unlock cutoff. A focus stretch caps at 240 points, manual records count half, plot limit
+  grows 3 → 4 → 5 with new-generation harvests, and growth has six art stages. Room v2 archives
+  previous farm progress and rebuilds it from source data once. Backup format 2 preserves field
+  cutoffs and legacy archive and still reads format 1. `TaskCompletionHook` stops linked timers;
+  `FarmHook` recomputes nutrients.
 - **Notifications**: three channels, timers at low importance so ongoing updates stay silent, a
   deep link (`meolist://task/{id}`, `meolist://tracker`) on tap, and `NotificationStartup` resyncs on
   app start and on resume so granting permission later picks up timers already running.

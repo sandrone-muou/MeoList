@@ -56,6 +56,19 @@ data class NutrientEntry(
     val plotId: Long?,
     val amount: Int,
     val earnedAt: Long,
+    val sequence: Long = 0,
+)
+
+/** Source cutoff for one field. Sources created before a field unlock are never backfilled into it. */
+data class FarmField(val slot: Int, val sourceCutoff: Long)
+
+data class FarmState(val rulesVersion: Int, val nextSequence: Long)
+
+data class LegacyFarmSummary(
+    val archivedAt: Long,
+    val plotCount: Int,
+    val harvestCount: Int,
+    val achievementCount: Int,
 )
 
 /** A finished crop. Kept for the harvest log and achievements. */
@@ -132,12 +145,24 @@ data class FarmSnapshot(
     val harvests: List<HarvestRecord> = emptyList(),
     val achievements: List<AchievementState> = emptyList(),
     val metrics: FarmMetrics = FarmMetrics(),
+    val fields: List<FarmField> = emptyList(),
+    val legacyFarm: LegacyFarmSummary? = null,
 ) {
     val activePlots: List<FarmPlot> get() = plots.filter { !it.isHarvested }.sortedBy { it.slot }
     val plotLimit: Int get() = FarmRules.plotLimit(harvests.size)
-    val compost: Int get() = entries.filter { it.plotId == null }.sumOf { it.amount }
+    fun balance(slot: Int): Long {
+        val cutoff = fields.firstOrNull { it.slot == slot }?.sourceCutoff ?: return 0
+        val earned = entries.asSequence()
+            .filter { it.sequence > cutoff }
+            .sumOf { it.amount.toLong() }
+        val plotIds = plots.asSequence().filter { it.slot == slot }.map { it.id }.toSet()
+        val spent = harvests.asSequence()
+            .filter { it.plotId in plotIds }
+            .sumOf { it.nutrients.toLong() }
+        return (earned - spent).coerceAtLeast(0)
+    }
 
-    fun growth(plot: FarmPlot): Int = entries.filter { it.plotId == plot.id }.sumOf { it.amount }
+    fun growth(plot: FarmPlot): Int = minOf(plot.crop.need.toLong(), balance(plot.slot)).toInt()
 
     fun unlockedCount(): Int = achievements.count { it.unlocked }
 }

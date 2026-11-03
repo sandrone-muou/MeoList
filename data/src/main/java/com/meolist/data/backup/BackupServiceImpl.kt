@@ -4,6 +4,7 @@ import com.meolist.domain.backup.BackupService
 import com.meolist.domain.backup.BackupSummary
 import com.meolist.domain.reminder.ReminderScheduler
 import com.meolist.domain.settings.AppPreferences
+import com.meolist.domain.farm.FarmInteractor
 import com.meolist.domain.tracker.TimerSync
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,8 +16,10 @@ class BackupServiceImpl @Inject constructor(
     private val prefs: AppPreferences,
     private val reminders: ReminderScheduler,
     private val timerSync: TimerSync,
+    private val farm: FarmInteractor,
 ) : BackupService {
     override suspend fun createBackup(): String {
+        farm.sync()
         val file = store.snapshot().copy(settings = SettingsDto.from(prefs.settings.first()))
         return BackupCodec.encode(file)
     }
@@ -25,6 +28,7 @@ class BackupServiceImpl @Inject constructor(
         val file = BackupCodec.decode(json)
         store.restore(file)
         file.settings?.let { settings -> prefs.updateSettings { settings.toSettings() } }
+        farm.sync()
         // Reminder fire times are derived from tasks, and all ids/links may have changed.
         reminders.rescheduleAll(recompute = true)
         timerSync.sync()

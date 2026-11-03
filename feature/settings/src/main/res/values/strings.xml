@@ -40,7 +40,7 @@
     <string name="settings_default_reminder_desc">Used for all-day items without a time of their own.</string>
     <string name="settings_section_data">Data</string>
     <string name="settings_backup">Back up data</string>
-    <string name="settings_backup_desc">Save every list, task, record, habit and farm row as JSON.</string>
+    <string name="settings_backup_desc">Save your data and farm progress as JSON. Older app versions cannot restore this backup.</string>
     <string name="settings_restore">Restore from backup</string>
     <string name="settings_restore_desc">Replace all data with a backup file.</string>
     <string name="settings_export_csv">Export records as CSV</string>
@@ -69,5 +69,5 @@
     <string name="settings_about_version">MeoList %1$s</string>
     <string name="settings_about_author">Made by sandrone-muou</string>
     <string name="settings_about_license">Apache License 2.0</string>
-    <string name="settings_app_version">0.2.1</string>
+    <string name="settings_app_version">0.3.0</string>
 </resources>

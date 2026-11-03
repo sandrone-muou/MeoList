@@ -10,10 +10,40 @@ import com.meolist.data.db.entity.AchievementEntity
 import com.meolist.data.db.entity.FarmPlotEntity
 import com.meolist.data.db.entity.HarvestEntity
 import com.meolist.data.db.entity.NutrientEntity
+import com.meolist.data.db.entity.FarmSlotEntity
+import com.meolist.data.db.entity.FarmStateEntity
+import com.meolist.data.db.entity.LegacyFarmArchiveEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface FarmDao {
+    @Query("SELECT * FROM farm_state WHERE id = 1")
+    suspend fun getFarmState(): FarmStateEntity?
+
+    @Query("SELECT * FROM farm_state WHERE id = 1")
+    fun observeFarmState(): Flow<FarmStateEntity?>
+
+    @Upsert
+    suspend fun saveFarmState(state: FarmStateEntity)
+
+    @Query("SELECT * FROM farm_slot ORDER BY slot")
+    suspend fun getFields(): List<FarmSlotEntity>
+
+    @Query("SELECT * FROM farm_slot ORDER BY slot")
+    fun observeFields(): Flow<List<FarmSlotEntity>>
+
+    @Upsert
+    suspend fun saveField(field: FarmSlotEntity)
+
+    @Query("SELECT * FROM farm_legacy_archive WHERE id = 1")
+    suspend fun getLegacyArchive(): LegacyFarmArchiveEntity?
+
+    @Query("SELECT * FROM farm_legacy_archive WHERE id = 1")
+    fun observeLegacyArchive(): Flow<LegacyFarmArchiveEntity?>
+
+    @Upsert
+    suspend fun saveLegacyArchive(archive: LegacyFarmArchiveEntity)
+
     @Query("SELECT * FROM farm_plot ORDER BY slot, plantedAt")
     fun observePlots(): Flow<List<FarmPlotEntity>>
 
@@ -26,21 +56,29 @@ interface FarmDao {
     @Update
     suspend fun updatePlot(plot: FarmPlotEntity)
 
-    @Query("SELECT * FROM farm_nutrient ORDER BY earnedAt")
+    @Query("SELECT * FROM farm_nutrient ORDER BY sequence")
     fun observeNutrients(): Flow<List<NutrientEntity>>
 
-    @Query("SELECT * FROM farm_nutrient ORDER BY earnedAt")
+    @Query("SELECT * FROM farm_nutrient ORDER BY sequence")
     suspend fun getNutrients(): List<NutrientEntity>
 
     @Upsert
     suspend fun upsertNutrients(entries: List<NutrientEntity>)
 
-    @Query("DELETE FROM farm_nutrient WHERE sourceKey IN (:keys)")
-    suspend fun deleteNutrients(keys: List<String>)
+    @Query("DELETE FROM farm_nutrient")
+    suspend fun clearNutrients()
 
-    /** Returns the number of rows moved. */
-    @Query("UPDATE farm_nutrient SET plotId = :plotId WHERE plotId IS NULL")
-    suspend fun attachCompost(plotId: Long): Int
+    @Query("DELETE FROM farm_plot")
+    suspend fun clearPlots()
+
+    @Query("DELETE FROM farm_harvest")
+    suspend fun clearHarvests()
+
+    @Query("DELETE FROM farm_achievement")
+    suspend fun clearAchievements()
+
+    @Query("DELETE FROM farm_slot")
+    suspend fun clearFields()
 
     @Query("SELECT * FROM farm_harvest ORDER BY harvestedAt DESC")
     fun observeHarvests(): Flow<List<HarvestEntity>>

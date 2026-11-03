@@ -34,21 +34,18 @@ import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Grass
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Spa
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -116,7 +113,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 sealed interface FarmEvent {
-    data class CompostApplied(val amount: Int) : FarmEvent
     data object SlotTaken : FarmEvent
     data object CropLocked : FarmEvent
     data object NotReady : FarmEvent
@@ -143,11 +139,9 @@ class FarmViewModel @Inject constructor(
         viewModelScope.launch { farm.sync() }
     }
 
-    fun plant(slot: Int, crop: Crop, useCompost: Boolean) = viewModelScope.launch {
-        when (val result = farm.plant(slot, crop, useCompost)) {
-            is PlantResult.Planted -> if (result.compostUsed > 0) {
-                local.update { it.copy(event = FarmEvent.CompostApplied(result.compostUsed)) }
-            }
+    fun plant(slot: Int, crop: Crop) = viewModelScope.launch {
+        when (farm.plant(slot, crop)) {
+            is PlantResult.Planted -> Unit
             PlantResult.SlotTaken -> local.update { it.copy(event = FarmEvent.SlotTaken) }
             PlantResult.SlotLocked, PlantResult.CropLocked ->
                 local.update { it.copy(event = FarmEvent.CropLocked) }
@@ -160,11 +154,6 @@ class FarmViewModel @Inject constructor(
             HarvestResult.NotReady -> local.update { it.copy(event = FarmEvent.NotReady) }
             HarvestResult.Empty -> Unit
         }
-    }
-
-    fun applyCompost(plotId: Long) = viewModelScope.launch {
-        val moved = farm.applyCompost(plotId)
-        if (moved > 0) local.update { it.copy(event = FarmEvent.CompostApplied(moved)) }
     }
 
     fun dismissHarvest() = local.update { it.copy(harvest = null) }
@@ -191,11 +180,6 @@ fun FarmRoute(
     LaunchedEffect(state.event) {
         when (val event = state.event) {
             null -> Unit
-            is FarmEvent.CompostApplied -> {
-                haptic()
-                snackbar.showSnackbar(context.getString(R.string.farm_compost_applied, event.amount))
-                vm.consumeEvent()
-            }
             FarmEvent.SlotTaken -> {
                 snackbar.showSnackbar(context.getString(R.string.farm_slot_taken))
                 vm.consumeEvent()
@@ -254,7 +238,7 @@ fun FarmRoute(
                     },
                 )
             }
-            item { CompostCard(snapshot) }
+            item { FarmInfoCard(snapshot) }
             item {
                 SectionHeader(
                     title = stringResource(R.string.farm_achievements_title),
@@ -292,8 +276,9 @@ fun FarmRoute(
     plantingSlot?.let { slot ->
         PlantSheet(
             snapshot = snapshot,
-            onPlant = { crop, useCompost ->
-                vm.plant(slot, crop, useCompost)
+            balance = snapshot.balance(slot),
+            onPlant = { crop ->
+                vm.plant(slot, crop)
                 plantingSlot = null
             },
             onDismiss = { plantingSlot = null },
@@ -304,15 +289,11 @@ fun FarmRoute(
         PlotSheet(
             plot = plot,
             growth = snapshot.growth(plot),
-            stage = FarmRules.stage(plot, snapshot.entries),
-            compost = snapshot.compost,
+            balance = snapshot.balance(plot.slot),
+            stage = FarmRules.stage(plot, snapshot.growth(plot)),
             onHarvest = {
                 haptic()
                 vm.harvest(plot.id)
-            },
-            onFertilize = {
-                vm.applyCompost(plot.id)
-                detailPlotId = null
             },
             onDismiss = { detailPlotId = null },
         )
@@ -411,7 +392,8 @@ private fun FarmScene(
                                 locked = locked,
                                 lockedNeeded = lockedNeeded,
                                 growth = plot?.let { snapshot.growth(it) } ?: 0,
-                                stage = plot?.let { FarmRules.stage(it, snapshot.entries) } ?: 0,
+                                balance = snapshot.balance(slot),
+                                stage = plot?.let { FarmRules.stage(it, snapshot.growth(it)) } ?: 0,
                                 modifier = Modifier.weight(1f),
                                 onClick = {
                                     when {
@@ -479,6 +461,7 @@ private fun PlotTile(
     locked: Boolean,
     lockedNeeded: Int,
     growth: Int,
+    balance: Long,
     stage: Int,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
@@ -537,6 +520,13 @@ private fun PlotTile(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (balance > 0) {
+                    Text(
+                        stringResource(R.string.farm_slot_balance, balance),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
             else -> {
                 CropArt(
@@ -582,7 +572,7 @@ private fun PlotTile(
 }
 
 @Composable
-private fun CompostCard(snapshot: FarmSnapshot) {
+private fun FarmInfoCard(snapshot: FarmSnapshot) {
     Card(
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
@@ -592,32 +582,24 @@ private fun CompostCard(snapshot: FarmSnapshot) {
             Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconBadge(
-                icon = Icons.Outlined.Spa,
-                color = MaterialTheme.colorScheme.onTertiaryContainer,
-                size = 40.dp,
-            )
+            IconBadge(icon = Icons.Outlined.Grass, color = MaterialTheme.colorScheme.onTertiaryContainer, size = 40.dp)
             Spacer(Modifier.width(Meo.spacing.md))
             Column(Modifier.weight(1f)) {
                 Text(
-                    stringResource(R.string.farm_compost_title),
+                    stringResource(R.string.farm_parallel_title),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                 )
                 Text(
-                    if (snapshot.compost > 0) {
-                        stringResource(R.string.farm_compost_amount, snapshot.compost)
-                    } else {
-                        stringResource(R.string.farm_compost_empty)
-                    },
+                    stringResource(R.string.farm_parallel_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f),
                 )
             }
-            if (snapshot.compost > 0) {
+            snapshot.legacyFarm?.let { legacy ->
                 Text(
-                    snapshot.compost.toString(),
-                    style = MaterialTheme.typography.headlineSmall,
+                    stringResource(R.string.farm_legacy_summary, legacy.plotCount, legacy.harvestCount),
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                 )
             }
@@ -725,11 +707,11 @@ private fun HarvestList(harvests: List<HarvestRecord>) {
 @Composable
 private fun PlantSheet(
     snapshot: FarmSnapshot,
-    onPlant: (Crop, Boolean) -> Unit,
+    balance: Long,
+    onPlant: (Crop) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var selected by remember { mutableStateOf<Crop?>(null) }
-    var useCompost by remember { mutableStateOf(snapshot.compost > 0) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -765,19 +747,14 @@ private fun PlantSheet(
                 }
                 Spacer(Modifier.height(Meo.spacing.sm))
             }
-            if (snapshot.compost > 0) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Switch(checked = useCompost, onCheckedChange = { useCompost = it })
-                    Spacer(Modifier.width(Meo.spacing.sm))
-                    Text(
-                        stringResource(R.string.farm_plant_use_compost, snapshot.compost),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
+            Text(
+                stringResource(R.string.farm_slot_balance, balance),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Spacer(Modifier.height(Meo.spacing.md))
             Button(
-                onClick = { selected?.let { onPlant(it, useCompost) } },
+                onClick = { selected?.let(onPlant) },
                 enabled = selected != null,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) {
@@ -866,10 +843,9 @@ private fun CropOption(
 private fun PlotSheet(
     plot: FarmPlot,
     growth: Int,
+    balance: Long,
     stage: Int,
-    compost: Int,
     onHarvest: () -> Unit,
-    onFertilize: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val mature = growth >= plot.crop.need
@@ -956,19 +932,9 @@ private fun PlotSheet(
                 ) {
                     Text(stringResource(R.string.farm_plot_harvest))
                 }
-            } else if (compost > 0) {
-                FilledTonalButton(
-                    onClick = onFertilize,
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                ) {
-                    Text(
-                        stringResource(R.string.farm_plot_compost) + " · " +
-                            stringResource(R.string.farm_compost_amount, compost),
-                    )
-                }
             } else {
                 Text(
-                    stringResource(R.string.farm_plot_no_compost),
+                    stringResource(R.string.farm_slot_balance, balance),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

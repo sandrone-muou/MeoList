@@ -15,9 +15,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Guards the frozen schema: a database created from the checked-in v1 schema must open with the
- * current entities and expose every table, including the farm ones added during development.
- * The first real schema change adds `migrate1To2` next to this test.
+ * Guards the v1 schema and verifies that the v1 -> v2 migration retains both task data and the old
+ * farm rows for the first-use farm rebuild.
  */
 @RunWith(AndroidJUnit4::class)
 class FrozenSchemaTest {
@@ -38,16 +37,22 @@ class FrozenSchemaTest {
                 "INSERT INTO task (id, title, note, priority, status, allDay, repeatFromCompletion, sortOrder, createdAt, updatedAt) " +
                     "VALUES (1, 'from v1', '', 0, 0, 1, 0, 1, 1, 1)",
             )
+            execSQL("INSERT INTO farm_plot (id, slot, crop, plantedAt, harvestedAt) VALUES (1, 0, 'carrot', 1, NULL)")
+            execSQL("INSERT INTO farm_nutrient (sourceKey, plotId, amount, earnedAt) VALUES ('record:1', 1, 60, 1)")
             close()
         }
 
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val db = Room.databaseBuilder(context, MeoDatabase::class.java, databaseName).build()
+        val db = Room.databaseBuilder(context, MeoDatabase::class.java, databaseName)
+            .addMigrations(MIGRATION_1_2)
+            .build()
         try {
             runBlocking {
                 assertNotNull(db.taskDao().get(1))
-                assertEquals(0, db.farmDao().getPlots().size)
-                assertEquals(0, db.farmDao().getNutrients().size)
+                assertEquals(1, db.farmDao().getPlots().size)
+                assertEquals(0L, db.farmDao().getNutrients().single().sequence)
+                assertEquals(null, db.farmDao().getFarmState())
+                assertEquals(0, db.farmDao().getFields().size)
                 assertEquals(0, db.farmDao().getHarvests().size)
                 assertEquals(0, db.farmDao().getAchievements().size)
             }

@@ -13,6 +13,10 @@
     <string name="farm_slot_locked_harvests">收获 %1$d 次解锁</string>
     <string name="farm_slot_locked_short">收获 %1$d 次</string>
     <string name="farm_plot_growth">%1$d / %2$d</string>
+    <string name="farm_slot_balance">本块田已储存 %1$d 点养分</string>
+    <string name="farm_parallel_title">每块田都会生长</string>
+    <string name="farm_parallel_body">每块已解锁的田地都会获得养分，并独立储存剩余养分。</string>
+    <string name="farm_legacy_summary">旧农场已归档 · %1$d 块田 · 收获 %2$d 次</string>
     <string name="farm_plot_harvest">收获</string>
     <string name="farm_plot_compost">施肥</string>
     <string name="farm_compost_title">堆肥池</string>

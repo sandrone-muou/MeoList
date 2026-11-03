@@ -35,10 +35,14 @@ data class BackupFile(
     val nutrients: List<NutrientDto> = emptyList(),
     val harvests: List<HarvestDto> = emptyList(),
     val achievements: List<AchievementDto> = emptyList(),
+    val farmState: FarmStateDto? = null,
+    val farmFields: List<FarmFieldDto> = emptyList(),
+    val legacyFarm: LegacyFarmArchiveDto? = null,
     val settings: SettingsDto? = null,
 ) {
     companion object {
-        const val FORMAT = 1
+        const val LEGACY_FORMAT = 1
+        const val FORMAT = 2
     }
 }
 
@@ -176,7 +180,28 @@ data class FarmPlotDto(
 )
 
 @Serializable
-data class NutrientDto(val sourceKey: String, val plotId: Long?, val amount: Int, val earnedAt: Long)
+data class NutrientDto(
+    val sourceKey: String,
+    val plotId: Long?,
+    val amount: Int,
+    val earnedAt: Long,
+    val sequence: Long = 0,
+)
+
+@Serializable
+data class FarmStateDto(val rulesVersion: Int, val nextSequence: Long)
+
+@Serializable
+data class FarmFieldDto(val slot: Int, val sourceCutoff: Long)
+
+@Serializable
+data class LegacyFarmArchiveDto(
+    val archivedAt: Long,
+    val plots: List<FarmPlotDto>,
+    val nutrients: List<NutrientDto>,
+    val harvests: List<HarvestDto>,
+    val achievements: List<AchievementDto>,
+)
 
 @Serializable
 data class HarvestDto(

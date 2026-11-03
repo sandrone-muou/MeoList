@@ -29,6 +29,9 @@ import com.meolist.data.db.entity.TagEntity
 import com.meolist.data.db.entity.TaskEntity
 import com.meolist.data.db.entity.TaskListEntity
 import com.meolist.data.db.entity.TaskTagEntity
+import com.meolist.data.db.entity.FarmStateEntity
+import com.meolist.data.db.entity.FarmSlotEntity
+import com.meolist.data.db.entity.LegacyFarmArchiveEntity
 
 @Database(
     entities = [
@@ -50,8 +53,11 @@ import com.meolist.data.db.entity.TaskTagEntity
         NutrientEntity::class,
         HarvestEntity::class,
         AchievementEntity::class,
+        FarmStateEntity::class,
+        FarmSlotEntity::class,
+        LegacyFarmArchiveEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class MeoDatabase : RoomDatabase() {
