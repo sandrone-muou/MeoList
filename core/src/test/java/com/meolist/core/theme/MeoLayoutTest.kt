@@ -1,5 +1,6 @@
 package com.meolist.core.theme
 
+import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -32,6 +33,8 @@ class MeoLayoutTest {
         assertTrue(compact.weekChartHeight < regular.weekChartHeight)
         assertTrue(compact.heatmapCell < regular.heatmapCell)
         assertTrue(compact.plotTileMin < regular.plotTileMin)
+        assertTrue(compact.plotTileMinWidth < regular.plotTileMinWidth)
+        assertTrue(compact.plotTileWideMinHeight < regular.plotTileWideMinHeight)
         assertTrue(compact.toolCardHeight < regular.toolCardHeight)
         assertTrue(compact.calendarCell < regular.calendarCell)
         assertTrue(compact.trackerPad < regular.trackerPad)
@@ -44,5 +47,23 @@ class MeoLayoutTest {
         assertEquals(20f, regular.sectionTop.value)
         assertEquals(96f, regular.listBottom.value)
         assertEquals(44f, regular.calendarCell.value)
+    }
+
+    @Test
+    fun trackerUsesTwoColumnsAtRealPhoneishContentWidth() {
+        val layout = MeoLayout.Compact
+        assertEquals(1, layout.trackerColumnCount(288.dp))
+        assertEquals(2, layout.trackerColumnCount(315.dp))
+        assertEquals(2, layout.trackerColumnCount(373.dp))
+        assertEquals(3, MeoLayout().trackerColumnCount(568.dp))
+    }
+
+    @Test
+    fun farmPlotsReflowFromThreeColumnsToTwoAndOne() {
+        val layout = MeoLayout.Compact
+        assertEquals(1, layout.farmPlotColumnCount(96.dp))
+        assertEquals(2, layout.farmPlotColumnCount(291.dp))
+        assertEquals(3, layout.farmPlotColumnCount(349.dp))
+        assertEquals(1, layout.farmPlotColumnCount(0.dp))
     }
 }

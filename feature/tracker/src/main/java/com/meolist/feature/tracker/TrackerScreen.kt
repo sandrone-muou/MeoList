@@ -70,9 +70,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -116,7 +116,6 @@ fun TrackerRoute(
     var showArchived by remember { mutableStateOf(false) }
     var editingRunning by remember { mutableStateOf<TypeCard?>(null) }
     var discarding by remember { mutableStateOf<RunningTimer?>(null) }
-    val minimumCardWidth = Meo.layout.trackerCardMinWidth
 
     MeoScaffold(
         title = stringResource(R.string.tracker_title),
@@ -159,46 +158,53 @@ fun TrackerRoute(
                 onAddType = { onEditType(0) },
                 modifier = Modifier.padding(padding),
             )
-            else -> LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = minimumCardWidth),
-                contentPadding = PaddingValues(
-                    start = Meo.spacing.screen,
-                    end = Meo.spacing.screen,
-                    top = Meo.spacing.xs,
-                    bottom = Meo.spacing.bottomContent,
-                ),
-                horizontalArrangement = Arrangement.spacedBy(Meo.layout.trackerGap),
-                verticalArrangement = Arrangement.spacedBy(Meo.layout.trackerGap),
+            else -> BoxWithConstraints(
                 modifier = Modifier.padding(padding).fillMaxSize(),
             ) {
-                val runningCards = state.cards.filter { it.running != null }
-                if (runningCards.size > 1) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        RunningHero(
-                            cards = runningCards,
-                            onStopAll = vm::stopAll,
+                val contentWidth = maxWidth - Meo.spacing.screen * 2
+                val columns = Meo.layout.trackerColumnCount(contentWidth)
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(columns),
+                    contentPadding = PaddingValues(
+                        start = Meo.spacing.screen,
+                        end = Meo.spacing.screen,
+                        top = Meo.spacing.xs,
+                        bottom = Meo.spacing.bottomContent,
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(Meo.layout.trackerGap),
+                    verticalArrangement = Arrangement.spacedBy(Meo.layout.trackerGap),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    val runningCards = state.cards.filter { it.running != null }
+                    if (runningCards.size > 1) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            RunningHero(
+                                cards = runningCards,
+                                onStopAll = vm::stopAll,
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
+                    }
+                    items(state.cards, key = { it.type.id }) { card ->
+                        TypeCardView(
+                            card = card,
+                            windows = state.windows,
+                            now = now,
+                            compactRow = columns == 1,
                             modifier = Modifier.animateItem(),
+                            onToggle = {
+                                if (card.running == null && !askedNotifications) {
+                                    askedNotifications = true
+                                    permissions.requestNotificationsIfNeeded()
+                                }
+                                vm.toggle(card)
+                            },
+                            onEdit = { onEditType(card.type.id) },
+                            onEditRunning = { editingRunning = card },
+                            onDiscard = { card.running?.let { discarding = it } },
+                            onArchive = { vm.setArchived(card.type.id, true) },
                         )
                     }
-                }
-                items(state.cards, key = { it.type.id }) { card ->
-                    TypeCardView(
-                        card = card,
-                        windows = state.windows,
-                        now = now,
-                        modifier = Modifier.animateItem(),
-                        onToggle = {
-                            if (card.running == null && !askedNotifications) {
-                                askedNotifications = true
-                                permissions.requestNotificationsIfNeeded()
-                            }
-                            vm.toggle(card)
-                        },
-                        onEdit = { onEditType(card.type.id) },
-                        onEditRunning = { editingRunning = card },
-                        onDiscard = { card.running?.let { discarding = it } },
-                        onArchive = { vm.setArchived(card.type.id, true) },
-                    )
                 }
             }
         }
@@ -242,6 +248,7 @@ private fun TypeCardView(
     card: TypeCard,
     windows: Map<GoalPeriod, PeriodWindow>,
     now: Long,
+    compactRow: Boolean,
     onToggle: () -> Unit,
     onEdit: () -> Unit,
     onEditRunning: () -> Unit,
@@ -271,11 +278,18 @@ private fun TypeCardView(
         return (card.recordedMs[period] ?: 0) + live
     }
 
-    val titleStyle = MaterialTheme.typography.titleSmall
-    val durationStyle = MaterialTheme.typography.titleMedium.tabular()
-    val density = LocalDensity.current
-    val measurer = rememberTextMeasurer()
-    val durationSample = "99:59:59"
+    val todayMs = periodMs(GoalPeriod.DAY)
+    val idleDuration = durationText(todayMs)
+    val shownDuration = if (running != null) elapsedText(now - running.startedAt) else idleDuration
+    val detailText = if (running != null) {
+        card.runningTaskTitle
+            ?: running.comment.takeIf { it.isNotBlank() }
+            ?: stringResource(R.string.tracker_today_total, idleDuration)
+    } else {
+        stringResource(R.string.tracker_today_label)
+    }
+    val gridDurationStyle = MaterialTheme.typography.titleLarge.tabular()
+    val rowDurationStyle = MaterialTheme.typography.titleMedium.tabular()
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
@@ -287,128 +301,245 @@ private fun TypeCardView(
                 } else Modifier,
             ),
     ) {
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(Meo.layout.trackerPad)) {
-            val textConstraints = androidx.compose.ui.unit.Constraints(maxWidth = constraints.maxWidth)
-            val durationHeight = remember(measurer, durationStyle, textConstraints, durationSample) {
-                measurer.measure(durationSample, durationStyle, constraints = textConstraints).size.height
+        if (compactRow) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = Meo.layout.trackerPad, vertical = Meo.spacing.xs)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RunningIcon(icon = card.type.icon, color = color, running = running != null)
+                    Spacer(Modifier.width(Meo.spacing.sm))
+                    Column(Modifier.weight(1f)) {
+                        Text(card.type.name, style = MaterialTheme.typography.titleSmall)
+                        TrackerDurationText(
+                            shownDuration = shownDuration,
+                            reservedDuration = idleDuration,
+                            style = rowDurationStyle,
+                            color = if (running != null) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                        Text(
+                            detailText,
+                            style = MaterialTheme.typography.bodySmall.tabular(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.width(Meo.spacing.xs))
+                    TrackerToggleButton(
+                        running = running != null,
+                        interaction = interaction,
+                        scale = buttonScale,
+                        onClick = {
+                            haptic()
+                            onToggle()
+                        },
+                    )
+                    TrackerMenu(
+                        expanded = menu,
+                        onExpandedChange = { menu = it },
+                        running = running != null,
+                        onEdit = onEdit,
+                        onEditRunning = onEditRunning,
+                        onDiscard = onDiscard,
+                        onArchive = onArchive,
+                    )
+                }
+                goalProgress(
+                    card = card,
+                    periodMs = ::periodMs,
+                    color = color,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = Meo.layout.trackerIconSize + Meo.spacing.sm, top = Meo.spacing.xs),
+                )
             }
-            Column(Modifier.fillMaxWidth()) {
+        } else {
+            Column(Modifier.fillMaxWidth().padding(Meo.layout.trackerPad)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RunningIcon(icon = card.type.icon, color = color, running = running != null)
                     Spacer(Modifier.width(Meo.spacing.xs))
-                    Text(card.type.name, style = titleStyle, modifier = Modifier.weight(1f))
-                    Box {
-                        IconButton(onClick = { menu = true }) {
-                            Icon(
-                                Icons.Outlined.MoreVert,
-                                stringResource(com.meolist.core.R.string.core_more_options),
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            if (running != null) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.tracker_adjust_running)) },
-                                    onClick = { menu = false; onEditRunning() },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.tracker_discard)) },
-                                    onClick = { menu = false; onDiscard() },
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.tracker_edit_type)) },
-                                onClick = { menu = false; onEdit() },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.tracker_archive)) },
-                                onClick = { menu = false; onArchive() },
-                            )
-                        }
-                    }
+                    Text(
+                        card.type.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TrackerMenu(
+                        expanded = menu,
+                        onExpandedChange = { menu = it },
+                        running = running != null,
+                        onEdit = onEdit,
+                        onEditRunning = onEditRunning,
+                        onDiscard = onDiscard,
+                        onArchive = onArchive,
+                    )
                 }
-                Spacer(Modifier.height(Meo.spacing.xs))
-                Text(
-                    if (running != null) elapsedText(now - running.startedAt) else durationText(periodMs(GoalPeriod.DAY)),
-                    style = durationStyle,
+                Spacer(Modifier.height(2.dp))
+                TrackerDurationText(
+                    shownDuration = shownDuration,
+                    reservedDuration = idleDuration,
+                    style = gridDurationStyle,
                     color = if (running != null) MaterialTheme.colorScheme.onSurface
                     else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = with(density) { durationHeight.toDp() }),
                 )
                 Text(
-                    if (running != null) {
-                        card.runningTaskTitle
-                            ?: running.comment.takeIf { it.isNotBlank() }
-                            ?: stringResource(R.string.tracker_today_total, durationText(periodMs(GoalPeriod.DAY)))
-                    } else {
-                        stringResource(R.string.tracker_today_label)
-                    },
+                    detailText,
                     style = MaterialTheme.typography.bodySmall.tabular(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    minLines = 2,
-                    modifier = Modifier.fillMaxWidth(),
                 )
-                card.goal?.let { goal ->
-                    val done = periodMs(goal.period)
-                    val target = goal.targetSec * 1000
-                    val goalStyle = MaterialTheme.typography.labelSmall.tabular()
-                    val goalSample = stringResource(goalLabel(goal.period), durationSample, durationText(target))
-                    val goalHeight = remember(measurer, goalStyle, goalSample, textConstraints) {
-                        measurer.measure(goalSample, goalStyle, constraints = textConstraints).size.height
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    MeoProgressBar(
-                        progress = (done.toFloat() / target).coerceIn(0f, 1f),
-                        color = color,
-                        height = 6.dp,
-                    )
-                    Spacer(Modifier.height(3.dp))
-                    Text(
-                        stringResource(goalLabel(goal.period), durationText(done), durationText(target)),
-                        style = goalStyle,
-                        color = if (done >= target) color else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = with(density) { goalHeight.toDp() }),
-                    )
-                }
+                goalProgress(
+                    card = card,
+                    periodMs = ::periodMs,
+                    color = color,
+                )
                 Spacer(Modifier.height(Meo.spacing.xs))
-                if (running != null) {
-                    FilledTonalButton(
-                        onClick = {
-                            haptic()
-                            onToggle()
-                        },
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
-                            contentColor = MaterialTheme.colorScheme.primary,
-                        ),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
-                        interactionSource = interaction,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).scale(buttonScale),
-                    ) {
-                        Icon(Icons.Outlined.StopCircle, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.tracker_stop))
-                    }
-                } else {
-                    Button(
-                        onClick = {
-                            haptic()
-                            onToggle()
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
-                        interactionSource = interaction,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).scale(buttonScale),
-                    ) {
-                        Icon(Icons.Outlined.PlayArrow, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.tracker_start))
-                    }
-                }
+                TrackerToggleButton(
+                    running = running != null,
+                    interaction = interaction,
+                    scale = buttonScale,
+                    fillWidth = true,
+                    onClick = {
+                        haptic()
+                        onToggle()
+                    },
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun TrackerDurationText(
+    shownDuration: String,
+    reservedDuration: String,
+    style: TextStyle,
+    color: Color,
+) {
+    Box {
+        Text(
+            reservedDuration,
+            style = style,
+            color = Color.Transparent,
+            modifier = Modifier.clearAndSetSemantics {},
+        )
+        Text(
+            shownDuration,
+            style = style,
+            color = color,
+        )
+    }
+}
+
+@Composable
+private fun goalProgress(
+    card: TypeCard,
+    periodMs: (GoalPeriod) -> Long,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    val goal = card.goal ?: return
+    val done = periodMs(goal.period)
+    val target = goal.targetSec * 1000
+    Column(modifier) {
+        Spacer(Modifier.height(6.dp))
+        MeoProgressBar(
+            progress = (done.toFloat() / target).coerceIn(0f, 1f),
+            color = color,
+            height = 6.dp,
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            stringResource(goalLabel(goal.period), durationText(done), durationText(target)),
+            style = MaterialTheme.typography.labelSmall.tabular(),
+            color = if (done >= target) color else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun TrackerToggleButton(
+    running: Boolean,
+    interaction: MutableInteractionSource,
+    scale: Float,
+    fillWidth: Boolean = false,
+    onClick: () -> Unit,
+) {
+    val modifier = Modifier
+        .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
+        .heightIn(min = Meo.layout.trackerControlMinSize)
+        .scale(scale)
+    if (running) {
+        FilledTonalButton(
+            onClick = onClick,
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                contentColor = MaterialTheme.colorScheme.primary,
+            ),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+            interactionSource = interaction,
+            modifier = modifier,
+        ) {
+            Icon(Icons.Outlined.StopCircle, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(stringResource(R.string.tracker_stop))
+        }
+    } else {
+        Button(
+            onClick = onClick,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+            interactionSource = interaction,
+            modifier = modifier,
+        ) {
+            Icon(Icons.Outlined.PlayArrow, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(stringResource(R.string.tracker_start))
+        }
+    }
+}
+
+@Composable
+private fun TrackerMenu(
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    running: Boolean,
+    onEdit: () -> Unit,
+    onEditRunning: () -> Unit,
+    onDiscard: () -> Unit,
+    onArchive: () -> Unit,
+) {
+    Box {
+        IconButton(onClick = { onExpandedChange(true) }) {
+            Icon(
+                Icons.Outlined.MoreVert,
+                stringResource(com.meolist.core.R.string.core_more_options),
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { onExpandedChange(false) }) {
+            if (running) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.tracker_adjust_running)) },
+                    onClick = { onExpandedChange(false); onEditRunning() },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.tracker_discard)) },
+                    onClick = { onExpandedChange(false); onDiscard() },
+                )
+            }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.tracker_edit_type)) },
+                onClick = { onExpandedChange(false); onEdit() },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.tracker_archive)) },
+                onClick = { onExpandedChange(false); onArchive() },
+            )
         }
     }
 }

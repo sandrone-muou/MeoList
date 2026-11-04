@@ -1,8 +1,10 @@
 # Next release plan: parallel farm growth and compact timer cards
 
-Status: implementation in progress.
+Status: historical v0.3.0 design; current checkout is v0.3.0.
 Prepared: 2026-11-03.
-Suggested release: 0.3.0, versionCode 6 (current checkout: 0.2.1, versionCode 5).
+Planned release: 0.3.0, versionCode 6 (pre-implementation baseline: 0.2.1, versionCode 5).
+
+The next patch design is [v0.3.1: device timer cards and farm layout fixes](v0.3.1-ui-fix-plan.md).
 
 ## 1. Outcomes and scope
 

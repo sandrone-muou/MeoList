@@ -22,12 +22,15 @@ data class MeoLayout(
     val heatmapGap: Dp = 4.dp,
     val donutMin: Dp = 144.dp,
     val plotTileMin: Dp = 112.dp,
+    val plotTileMinWidth: Dp = 136.dp,
+    val plotTileWideMinHeight: Dp = 88.dp,
     val toolCardHeight: Dp = 152.dp,
     val calendarCell: Dp = 44.dp,
     val trackerPad: Dp = 12.dp,
     val trackerGap: Dp = 8.dp,
     val trackerCardMinWidth: Dp = 168.dp,
     val trackerIconSize: Dp = 40.dp,
+    val trackerControlMinSize: Dp = 48.dp,
 ) {
     companion object {
         val Compact = MeoLayout(
@@ -45,16 +48,32 @@ data class MeoLayout(
             heatmapGap = 3.dp,
             donutMin = 128.dp,
             plotTileMin = 96.dp,
+            plotTileMinWidth = 104.dp,
+            plotTileWideMinHeight = 72.dp,
             toolCardHeight = 128.dp,
             calendarCell = 40.dp,
             trackerPad = 8.dp,
             trackerGap = 6.dp,
-            trackerCardMinWidth = 156.dp,
+            trackerCardMinWidth = 148.dp,
             trackerIconSize = 32.dp,
+            trackerControlMinSize = 48.dp,
         )
 
         fun forWidth(widthDp: Int): MeoLayout = if (widthDp < 600) Compact else MeoLayout()
     }
+
+    fun trackerColumnCount(contentWidth: Dp): Int =
+        columnCount(contentWidth, trackerCardMinWidth, trackerGap).coerceAtMost(4)
+
+    fun farmPlotColumnCount(contentWidth: Dp): Int =
+        columnCount(contentWidth, plotTileMinWidth, MeoSpacing().sm).coerceAtMost(5)
 }
 
 val LocalMeoLayout = staticCompositionLocalOf { MeoLayout() }
+
+private fun columnCount(contentWidth: Dp, minCardWidth: Dp, gap: Dp): Int {
+    if (contentWidth <= 0.dp) return 1
+    return ((contentWidth.value + gap.value) / (minCardWidth.value + gap.value))
+        .toInt()
+        .coerceAtLeast(1)
+}

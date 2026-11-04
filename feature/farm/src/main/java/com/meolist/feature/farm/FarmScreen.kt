@@ -10,12 +10,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -40,6 +41,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -84,7 +86,6 @@ import com.meolist.core.ui.components.MeoListGroup
 import com.meolist.core.ui.components.MeoProgressBar
 import com.meolist.core.ui.components.MeoScaffold
 import com.meolist.core.ui.components.SectionHeader
-import com.meolist.core.ui.components.StatChip
 import com.meolist.core.ui.components.rememberConfirmHaptic
 import com.meolist.domain.farm.Achievement
 import com.meolist.domain.farm.AchievementCatalog
@@ -304,7 +305,6 @@ fun FarmRoute(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FarmScene(
     snapshot: FarmSnapshot,
@@ -320,7 +320,7 @@ private fun FarmScene(
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Box(
+        BoxWithConstraints(
             Modifier
                 .fillMaxWidth()
                 .background(
@@ -329,34 +329,39 @@ private fun FarmScene(
                     ),
                 ),
         ) {
+            val columns = Meo.layout.farmPlotColumnCount(
+                maxWidth - Meo.layout.cardPadH * 2,
+            )
             FarmBackdrop(Modifier.matchParentSize())
-            Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                FlowRow(
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Meo.layout.cardPadH, vertical = Meo.spacing.md),
+            ) {
+                Row(
                     horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm),
-                    verticalArrangement = Arrangement.spacedBy(Meo.spacing.xs),
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
                 ) {
-                    StatChip(
+                    FarmMetric(
                         icon = Icons.Outlined.Grass,
                         text = stringResource(R.string.farm_chip_harvests) + " " +
                             snapshot.metrics.harvested.toString(),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        container = MaterialTheme.colorScheme.surface.copy(alpha = 0.62f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
-                    StatChip(
-                        icon = Icons.Outlined.Timer,
-                        text = stringResource(R.string.farm_chip_focus) + " " +
-                            durationText(snapshot.metrics.focusMinutes * 60_000L),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        container = MaterialTheme.colorScheme.surface.copy(alpha = 0.62f),
-                    )
-                    StatChip(
+                    FarmMetric(
                         icon = Icons.Outlined.LocalFireDepartment,
                         text = stringResource(R.string.farm_chip_streak) + " " +
                             stringResource(R.string.farm_days, snapshot.metrics.bestStreak),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        container = MaterialTheme.colorScheme.surface.copy(alpha = 0.62f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                 }
+                Spacer(Modifier.height(Meo.spacing.xs))
+                FarmMetric(
+                    icon = Icons.Outlined.Timer,
+                    text = stringResource(R.string.farm_chip_focus) + " " +
+                        durationText(snapshot.metrics.focusMinutes * 60_000L),
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 if (ready > 0) {
                     Spacer(Modifier.height(Meo.spacing.sm))
                     Row(Modifier.fillMaxWidth()) {
@@ -376,9 +381,12 @@ private fun FarmScene(
                     }
                 }
                 Spacer(Modifier.height(8.dp))
-                (0 until FarmRules.MAX_PLOTS).chunked(3).forEachIndexed { index, slots ->
+                (0 until FarmRules.MAX_PLOTS).chunked(columns).forEachIndexed { index, slots ->
                     if (index > 0) Spacer(Modifier.height(6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm),
+                        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                    ) {
                         slots.forEach { slot ->
                             val plot = bySlot[slot]
                             val locked = slot >= snapshot.plotLimit
@@ -394,6 +402,7 @@ private fun FarmScene(
                                 growth = plot?.let { snapshot.growth(it) } ?: 0,
                                 balance = snapshot.balance(slot),
                                 stage = plot?.let { FarmRules.stage(it, snapshot.growth(it)) } ?: 0,
+                                wide = columns == 1 || (columns == 2 && slots.size == 1),
                                 modifier = Modifier.weight(1f),
                                 onClick = {
                                     when {
@@ -404,13 +413,38 @@ private fun FarmScene(
                                 },
                             )
                         }
-                        repeat(3 - slots.size) {
-                            Spacer(Modifier.weight(1f))
-                        }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun FarmMetric(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.68f))
+            .padding(horizontal = Meo.spacing.md, vertical = Meo.spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            icon,
+            null,
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
 
@@ -463,6 +497,7 @@ private fun PlotTile(
     growth: Int,
     balance: Long,
     stage: Int,
+    wide: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -473,101 +508,197 @@ private fun PlotTile(
         plot != null -> MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)
         else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.48f)
     }
-    Column(
-        modifier = modifier
-            .heightIn(min = Meo.layout.plotTileMin)
-            .clip(MaterialTheme.shapes.medium)
-            .background(container)
-            .clickable(onClick = onClick)
-            .padding(6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        when {
-            locked -> {
-                Icon(
-                    Icons.Outlined.Lock,
-                    null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
-                    modifier = Modifier.size(22.dp),
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    stringResource(R.string.farm_slot_locked_short, lockedNeeded),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                )
-            }
-            plot == null -> {
-                Box(
-                    Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                    contentAlignment = Alignment.Center,
-                ) {
+    val tileModifier = modifier
+        .heightIn(min = if (wide) Meo.layout.plotTileWideMinHeight else Meo.layout.plotTileMin)
+        .fillMaxHeight()
+        .clip(MaterialTheme.shapes.medium)
+        .background(container)
+        .clickable(onClick = onClick)
+        .padding(
+            horizontal = if (wide) Meo.spacing.md else Meo.spacing.xs,
+            vertical = if (wide) Meo.spacing.sm else Meo.spacing.xs,
+        )
+
+    if (wide) {
+        Row(
+            modifier = tileModifier,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            when {
+                locked -> {
+                    Icon(
+                        Icons.Outlined.Lock,
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Spacer(Modifier.width(Meo.spacing.md))
                     Text(
-                        "+",
-                        style = MaterialTheme.typography.titleLarge,
+                        stringResource(R.string.farm_slot_locked_short, lockedNeeded),
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
                     )
                 }
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    stringResource(R.string.farm_slot_empty),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (balance > 0) {
-                    Text(
-                        stringResource(R.string.farm_slot_balance, balance),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                plot == null -> {
+                    EmptyPlotIcon()
+                    Spacer(Modifier.width(Meo.spacing.md))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.farm_slot_empty),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (balance > 0) {
+                            Text(
+                                stringResource(R.string.farm_slot_balance, balance),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+                else -> {
+                    CropArt(
+                        crop = plot.crop,
+                        stage = stage,
+                        description = cropName(plot.crop),
+                        modifier = Modifier.size(40.dp),
+                    )
+                    Spacer(Modifier.width(Meo.spacing.md))
+                    PlotDetails(
+                        crop = plot.crop,
+                        growth = growth,
+                        stage = stage,
+                        mature = mature,
+                        wide = true,
+                        modifier = Modifier.weight(1f),
                     )
                 }
-            }
-            else -> {
-                CropArt(
-                    crop = plot.crop,
-                    stage = stage,
-                    description = cropName(plot.crop),
-                    modifier = Modifier.size(48.dp),
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    cropName(plot.crop),
-                    style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    stringResource(stageLabel(stage)),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-                Spacer(Modifier.height(2.dp))
-                CropGrowthBar(
-                    progress = growth.toFloat() / plot.crop.need,
-                    height = 6.dp,
-                    color = if (mature) Meo.colors.success else MaterialTheme.colorScheme.primary,
-                    showTip = false,
-                    showTicks = false,
-                )
-                Text(
-                    if (mature) {
-                        stringResource(R.string.farm_slot_ready)
-                    } else {
-                        stringResource(R.string.farm_plot_growth, growth, plot.crop.need)
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (mature) Meo.colors.success else MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
             }
         }
+    } else {
+        Column(
+            modifier = tileModifier,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            when {
+                locked -> {
+                    Icon(
+                        Icons.Outlined.Lock,
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                        modifier = Modifier.size(22.dp),
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        stringResource(R.string.farm_slot_locked_short, lockedNeeded),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                plot == null -> {
+                    EmptyPlotIcon()
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        stringResource(R.string.farm_slot_empty),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (balance > 0) {
+                        Text(
+                            stringResource(R.string.farm_slot_balance, balance),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                else -> {
+                    CropArt(
+                        crop = plot.crop,
+                        stage = stage,
+                        description = cropName(plot.crop),
+                        modifier = Modifier.size(48.dp),
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    PlotDetails(
+                        crop = plot.crop,
+                        growth = growth,
+                        stage = stage,
+                        mature = mature,
+                        wide = false,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyPlotIcon() {
+    Box(
+        Modifier
+            .size(34.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            "+",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun PlotDetails(
+    crop: Crop,
+    growth: Int,
+    stage: Int,
+    mature: Boolean,
+    wide: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = if (wide) Alignment.Start else Alignment.CenterHorizontally,
+    ) {
+        Text(
+            cropName(crop),
+            style = MaterialTheme.typography.labelMedium,
+            textAlign = if (wide) TextAlign.Start else TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            stringResource(stageLabel(stage)),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = if (wide) TextAlign.Start else TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(2.dp))
+        CropGrowthBar(
+            progress = growth.toFloat() / crop.need,
+            height = 6.dp,
+            color = if (mature) Meo.colors.success else MaterialTheme.colorScheme.primary,
+            showTip = false,
+            showTicks = false,
+        )
+        Text(
+            if (mature) {
+                stringResource(R.string.farm_slot_ready)
+            } else {
+                stringResource(R.string.farm_plot_growth, growth, crop.need)
+            },
+            style = MaterialTheme.typography.labelSmall,
+            color = if (mature) Meo.colors.success else MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = if (wide) TextAlign.Start else TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -578,25 +709,33 @@ private fun FarmInfoCard(snapshot: FarmSnapshot) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            Modifier.fillMaxWidth().padding(Meo.spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Meo.spacing.sm),
         ) {
-            IconBadge(icon = Icons.Outlined.Grass, color = MaterialTheme.colorScheme.onTertiaryContainer, size = 40.dp)
-            Spacer(Modifier.width(Meo.spacing.md))
-            Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconBadge(
+                    icon = Icons.Outlined.Grass,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    size = 40.dp,
+                )
+                Spacer(Modifier.width(Meo.spacing.md))
                 Text(
                     stringResource(R.string.farm_parallel_title),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer,
-                )
-                Text(
-                    stringResource(R.string.farm_parallel_body),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f),
+                    modifier = Modifier.weight(1f),
                 )
             }
+            Text(
+                stringResource(R.string.farm_parallel_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f),
+            )
             snapshot.legacyFarm?.let { legacy ->
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.16f),
+                )
                 Text(
                     stringResource(R.string.farm_legacy_summary, legacy.plotCount, legacy.harvestCount),
                     style = MaterialTheme.typography.labelSmall,
