@@ -2,20 +2,13 @@ package com.meolist.feature.settings
 
 import com.meolist.core.ui.components.MeoScaffold
 import android.net.Uri
-import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.PaddingValues
@@ -36,8 +29,6 @@ import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Keyboard
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
@@ -60,18 +51,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TimeInput
-import androidx.compose.material3.TimePickerLayoutType
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -89,13 +72,13 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.meolist.core.locale.AppLanguage
 import com.meolist.core.locale.LanguageStore
 import com.meolist.core.locale.findActivity
 import com.meolist.core.ui.ConfirmDialog
+import com.meolist.core.ui.MeoTimePickerDialog
 import com.meolist.core.ui.ReminderPermissionBanner
 import com.meolist.core.ui.currentLocale
 import com.meolist.core.ui.rememberReminderPermissionState
@@ -406,9 +389,16 @@ fun SettingsRoute(
         )
     }
     if (choosingReminderTime) {
-        ReminderTimeDialog(
-            initialMinute = settings.defaultReminderMinute,
-            onConfirm = { vm.setDefaultReminderMinute(it); choosingReminderTime = false },
+        MeoTimePickerDialog(
+            initial = LocalTime.of(
+                settings.defaultReminderMinute / 60,
+                settings.defaultReminderMinute % 60,
+            ),
+            title = stringResource(R.string.settings_default_reminder),
+            onConfirm = {
+                vm.setDefaultReminderMinute(it.hour * 60 + it.minute)
+                choosingReminderTime = false
+            },
             onDismiss = { choosingReminderTime = false },
         )
     }
@@ -423,7 +413,6 @@ fun SettingsRoute(
         )
     }
 }
-
 @Composable
 private fun languageLabel(language: AppLanguage?): String = stringResource(
     when (language) {
@@ -620,84 +609,4 @@ private fun <T> ChoiceDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(com.meolist.core.R.string.core_cancel)) }
         },
     )
-}
-
-internal fun preferReminderTimeInput(width: Float, height: Float, fontScale: Float): Boolean =
-    width < 360f || height < 560f || fontScale > 1.15f
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-internal fun ReminderTimeDialog(
-    initialMinute: Int,
-    onConfirm: (Int) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val context = LocalContext.current
-    val keyboard = LocalSoftwareKeyboardController.current
-    val picker = rememberTimePickerState(
-        initialHour = initialMinute / 60,
-        initialMinute = initialMinute % 60,
-        is24Hour = DateFormat.is24HourFormat(context),
-    )
-    var dialChoice by rememberSaveable { mutableStateOf<Boolean?>(null) }
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        BoxWithConstraints(Modifier.imePadding().padding(12.dp), contentAlignment = Alignment.Center) {
-            val preferInput = preferReminderTimeInput(maxWidth.value, maxHeight.value, LocalDensity.current.fontScale)
-            val showDial = dialChoice ?: !preferInput
-            Surface(
-                modifier = Modifier.widthIn(max = 440.dp).fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge,
-                tonalElevation = 6.dp,
-            ) {
-                Column {
-                    Column(
-                        Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(20.dp),
-                    ) {
-                        Text(
-                            stringResource(R.string.settings_default_reminder),
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                        Spacer(Modifier.height(20.dp))
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            Box(Modifier.horizontalScroll(rememberScrollState())) {
-                                if (showDial) {
-                                    TimePicker(state = picker, layoutType = TimePickerLayoutType.Vertical)
-                                } else {
-                                    TimeInput(state = picker)
-                                }
-                            }
-                        }
-                    }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.End,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        IconButton(onClick = {
-                            keyboard?.hide()
-                            dialChoice = !showDial
-                        }) {
-                            Icon(
-                                if (showDial) Icons.Outlined.Keyboard else Icons.Outlined.Schedule,
-                                stringResource(
-                                    if (showDial) R.string.settings_time_switch_input else R.string.settings_time_switch_picker,
-                                ),
-                            )
-                        }
-                        Spacer(Modifier.weight(1f))
-                        TextButton(onClick = onDismiss) {
-                            Text(stringResource(com.meolist.core.R.string.core_cancel))
-                        }
-                        TextButton(onClick = { onConfirm(picker.hour * 60 + picker.minute) }) {
-                            Text(stringResource(com.meolist.core.R.string.core_ok))
-                        }
-                    }
-                }
-            }
-        }
-    }
 }

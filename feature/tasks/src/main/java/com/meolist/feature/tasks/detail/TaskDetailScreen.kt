@@ -293,6 +293,7 @@ private fun DueRow(state: TaskDetailState, task: Task, editable: Boolean, vm: Ta
     if (pickTime && dueDateTime != null) {
         MeoTimePickerDialog(
             initial = if (task.allDay) LocalTime.of(9, 0) else dueDateTime.toLocalTime(),
+            title = stringResource(R.string.tasks_set_time),
             onConfirm = { time -> vm.setDue(dueDateTime.toLocalDate(), time) },
             onDismiss = { pickTime = false },
             onClear = { vm.setDue(dueDateTime.toLocalDate(), null) },

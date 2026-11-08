@@ -229,6 +229,8 @@ class StatsViewModelTest {
         }
         override val lastTaskFilter = flowOf<String?>(null)
         override suspend fun setLastTaskFilter(key: String) = Unit
+        override val farmInfoDismissed = flowOf(false)
+        override suspend fun dismissFarmInfo() = Unit
     }
 
     private inline fun <reified T> repository(vararg results: Pair<String, Any>): T {

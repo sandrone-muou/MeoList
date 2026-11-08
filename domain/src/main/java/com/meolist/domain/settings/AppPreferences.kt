@@ -36,4 +36,8 @@ interface AppPreferences {
 
     val lastTaskFilter: Flow<String?>
     suspend fun setLastTaskFilter(key: String)
+
+    /** Whether the farm explanation card has been hidden on this device. */
+    val farmInfoDismissed: Flow<Boolean>
+    suspend fun dismissFarmInfo()
 }

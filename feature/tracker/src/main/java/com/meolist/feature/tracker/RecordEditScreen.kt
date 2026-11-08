@@ -444,6 +444,7 @@ fun RecordEditRoute(
     if (pickStartTime) {
         MeoTimePickerDialog(
             initial = start.toLocalTime(),
+            title = stringResource(R.string.tracker_record_start_time),
             onConfirm = { time -> vm.setStart(start.toLocalDate().atTime(time).toMillis(zone)) },
             onDismiss = { pickStartTime = false },
         )
@@ -458,6 +459,7 @@ fun RecordEditRoute(
     if (pickEndTime) {
         MeoTimePickerDialog(
             initial = end.toLocalTime(),
+            title = stringResource(R.string.tracker_record_end_time),
             onConfirm = { time -> vm.setEnd(end.toLocalDate().atTime(time).toMillis(zone)) },
             onDismiss = { pickEndTime = false },
         )

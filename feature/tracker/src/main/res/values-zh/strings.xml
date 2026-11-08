@@ -56,6 +56,8 @@
     <string name="tracker_record_activity">活动</string>
     <string name="tracker_record_start">开始</string>
     <string name="tracker_record_end">结束</string>
+    <string name="tracker_record_start_time">开始时间</string>
+    <string name="tracker_record_end_time">结束时间</string>
     <string name="tracker_record_duration">时长</string>
     <string name="tracker_record_task">任务</string>
     <string name="tracker_record_link_task">关联任务</string>

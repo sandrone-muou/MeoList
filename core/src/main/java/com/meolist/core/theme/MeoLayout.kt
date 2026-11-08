@@ -31,6 +31,9 @@ data class MeoLayout(
     val trackerCardMinWidth: Dp = 168.dp,
     val trackerIconSize: Dp = 40.dp,
     val trackerControlMinSize: Dp = 48.dp,
+    val timeDialogMaxWidth: Dp = 440.dp,
+    val timeWheelRowHeight: Dp = 48.dp,
+    val timeWheelHeight: Dp = 144.dp,
 ) {
     companion object {
         val Compact = MeoLayout(
@@ -57,6 +60,9 @@ data class MeoLayout(
             trackerCardMinWidth = 148.dp,
             trackerIconSize = 32.dp,
             trackerControlMinSize = 48.dp,
+            timeDialogMaxWidth = 360.dp,
+            timeWheelRowHeight = 44.dp,
+            timeWheelHeight = 132.dp,
         )
 
         fun forWidth(widthDp: Int): MeoLayout = if (widthDp < 600) Compact else MeoLayout()

@@ -728,6 +728,7 @@ private fun ReminderDialog(task: Task, initial: List<Reminder>, onConfirm: (List
     if (pickTime) {
         MeoTimePickerDialog(
             initial = LocalTime.of(customMinute / 60, customMinute % 60),
+            title = stringResource(R.string.tasks_set_time),
             onConfirm = {
                 customMinute = it.hour * 60 + it.minute
                 pickTime = false

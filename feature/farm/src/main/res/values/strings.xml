@@ -16,6 +16,8 @@
     <string name="farm_slot_balance">Stored on this field: %1$d nutrients</string>
     <string name="farm_parallel_title">Every field grows</string>
     <string name="farm_parallel_body">Each unlocked field receives nutrients and keeps its own surplus.</string>
+    <string name="farm_info_dismiss">Hide farm explanation</string>
+    <string name="farm_info_dismiss_failed">Couldn’t hide the farm explanation. Try again.</string>
     <string name="farm_legacy_summary">Previous farm archived · %1$d fields · %2$d harvests</string>
     <string name="farm_plot_harvest">Harvest</string>
     <string name="farm_plot_compost">Fertilize</string>

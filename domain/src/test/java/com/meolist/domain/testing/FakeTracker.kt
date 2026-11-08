@@ -30,6 +30,12 @@ class FakePreferences(initial: AppSettings = AppSettings()) : AppPreferences {
 
     override val lastTaskFilter: Flow<String?> = MutableStateFlow(null)
     override suspend fun setLastTaskFilter(key: String) = Unit
+
+    private val farmInfo = MutableStateFlow(false)
+    override val farmInfoDismissed: Flow<Boolean> = farmInfo
+    override suspend fun dismissFarmInfo() {
+        farmInfo.value = true
+    }
 }
 
 /** Runs the block directly; tests are single threaded. */

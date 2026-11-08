@@ -38,6 +38,9 @@ class MeoLayoutTest {
         assertTrue(compact.toolCardHeight < regular.toolCardHeight)
         assertTrue(compact.calendarCell < regular.calendarCell)
         assertTrue(compact.trackerPad < regular.trackerPad)
+        assertTrue(compact.timeDialogMaxWidth < regular.timeDialogMaxWidth)
+        assertTrue(compact.timeWheelRowHeight < regular.timeWheelRowHeight)
+        assertTrue(compact.timeWheelHeight < regular.timeWheelHeight)
     }
 
     @Test
@@ -47,6 +50,8 @@ class MeoLayoutTest {
         assertEquals(20f, regular.sectionTop.value)
         assertEquals(96f, regular.listBottom.value)
         assertEquals(44f, regular.calendarCell.value)
+        assertEquals(440f, regular.timeDialogMaxWidth.value)
+        assertEquals(144f, regular.timeWheelHeight.value)
     }
 
     @Test

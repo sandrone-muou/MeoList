@@ -19,8 +19,6 @@
     <string name="settings_stats_month">Month</string>
     <string name="settings_stats_year">Year</string>
     <string name="settings_stats_last_used">Remember last</string>
-    <string name="settings_time_switch_input">Switch to keyboard input</string>
-    <string name="settings_time_switch_picker">Switch to clock dial</string>
     <string name="settings_section_timing">Timing</string>
     <string name="settings_multiple_timers">Allow parallel timers</string>
     <string name="settings_multiple_timers_desc">Run several activities at the same time.</string>
@@ -69,5 +67,5 @@
     <string name="settings_about_version">MeoList %1$s</string>
     <string name="settings_about_author">Made by sandrone-muou</string>
     <string name="settings_about_license">Apache License 2.0</string>
-    <string name="settings_app_version">0.3.1</string>
+    <string name="settings_app_version">0.3.2</string>
 </resources>

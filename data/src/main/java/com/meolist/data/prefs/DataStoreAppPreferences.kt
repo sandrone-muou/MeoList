@@ -43,6 +43,7 @@ class DataStoreAppPreferences @Inject constructor(
         val statsDefaultView = stringPreferencesKey("stats_default_view")
         val lastStatsPeriod = stringPreferencesKey("last_stats_period")
         val lastTaskFilter = stringPreferencesKey("last_task_filter")
+        val farmInfoDismissed = booleanPreferencesKey("farm_info_dismissed")
         val quadrantTags = mapOf(
             Quadrant.URGENT_IMPORTANT to longPreferencesKey("quadrant_tag_urgent_important"),
             Quadrant.NOT_URGENT_IMPORTANT to longPreferencesKey("quadrant_tag_not_urgent_important"),
@@ -76,6 +77,13 @@ class DataStoreAppPreferences @Inject constructor(
 
     override suspend fun setLastTaskFilter(key: String) {
         store.edit { it[Keys.lastTaskFilter] = key }
+    }
+
+    override val farmInfoDismissed: Flow<Boolean> =
+        store.data.map { it[Keys.farmInfoDismissed] ?: false }.distinctUntilChanged()
+
+    override suspend fun dismissFarmInfo() {
+        store.edit { it[Keys.farmInfoDismissed] = true }
     }
 
     private fun Preferences.toSettings(): AppSettings {

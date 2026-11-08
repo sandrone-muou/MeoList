@@ -233,6 +233,7 @@ internal fun QuickScheduleSheet(
     if (pickTime) {
         MeoTimePickerDialog(
             initial = time ?: LocalTime.of(9, 0),
+            title = stringResource(R.string.tasks_set_time),
             onConfirm = { picked ->
                 if (time == null) reminder = null
                 time = picked
@@ -750,6 +751,7 @@ private fun QuickReminderSheet(
     if (pickTime) {
         MeoTimePickerDialog(
             initial = LocalTime.of(customMinute / 60, customMinute % 60),
+            title = stringResource(R.string.tasks_set_time),
             onConfirm = {
                 customMinute = it.hour * 60 + it.minute
                 pickTime = false

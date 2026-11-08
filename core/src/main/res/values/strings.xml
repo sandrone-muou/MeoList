@@ -21,4 +21,14 @@
     <string name="core_duration_h">%1$dh</string>
     <string name="core_duration_m">%1$dm</string>
     <string name="core_duration_hm">%1$dh %2$dm</string>
+    <string name="core_time_picker_wheel">Wheel</string>
+    <string name="core_time_picker_input">Type</string>
+    <string name="core_time_picker_hour">Hour</string>
+    <string name="core_time_picker_minute">Minute</string>
+    <string name="core_time_picker_am">AM</string>
+    <string name="core_time_picker_pm">PM</string>
+    <string name="core_time_picker_invalid_hour">Enter a valid hour</string>
+    <string name="core_time_picker_invalid_minute">Enter a minute from 00 to 59</string>
+    <string name="core_time_picker_hour_wheel">Hour wheel</string>
+    <string name="core_time_picker_minute_wheel">Minute wheel</string>
 </resources>

@@ -712,6 +712,7 @@ private fun RunningEditDialog(
     if (pickTime) {
         MeoTimePickerDialog(
             initial = startTime.toLocalTime(),
+            title = stringResource(R.string.tracker_started_at),
             onConfirm = { time ->
                 // Same day as the current start; a time still ahead of now means the day before.
                 var picked = startTime.toLocalDate().atTime(time).atZone(zone).toInstant().toEpochMilli()

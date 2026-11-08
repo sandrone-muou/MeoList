@@ -1,5 +1,6 @@
 package com.meolist.feature.farm
 
+import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -31,6 +32,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Grass
 import androidx.compose.material.icons.outlined.LocalFireDepartment
@@ -97,6 +99,7 @@ import com.meolist.domain.farm.FarmSnapshot
 import com.meolist.domain.farm.HarvestRecord
 import com.meolist.domain.farm.HarvestResult
 import com.meolist.domain.farm.PlantResult
+import com.meolist.domain.settings.AppPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import java.time.LocalDate
@@ -117,11 +120,13 @@ sealed interface FarmEvent {
     data object SlotTaken : FarmEvent
     data object CropLocked : FarmEvent
     data object NotReady : FarmEvent
+    data object DismissInfoFailed : FarmEvent
 }
 
 data class FarmUiState(
     val snapshot: FarmSnapshot = FarmSnapshot(),
     val loaded: Boolean = false,
+    val farmInfoDismissed: Boolean = false,
     val event: FarmEvent? = null,
     val harvest: HarvestRecord? = null,
 )
@@ -129,11 +134,16 @@ data class FarmUiState(
 @HiltViewModel
 class FarmViewModel @Inject constructor(
     private val farm: FarmInteractor,
+    private val prefs: AppPreferences,
 ) : ViewModel() {
     private val local = MutableStateFlow(FarmUiState())
 
-    val state: StateFlow<FarmUiState> = combine(farm.observe(), local) { snapshot, ui ->
-        ui.copy(snapshot = snapshot, loaded = true)
+    val state: StateFlow<FarmUiState> = combine(
+        farm.observe(),
+        prefs.farmInfoDismissed,
+        local,
+    ) { snapshot, dismissed, ui ->
+        ui.copy(snapshot = snapshot, loaded = true, farmInfoDismissed = dismissed)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FarmUiState())
 
     init {
@@ -160,6 +170,15 @@ class FarmViewModel @Inject constructor(
     fun dismissHarvest() = local.update { it.copy(harvest = null) }
 
     fun consumeEvent() = local.update { it.copy(event = null) }
+
+    fun dismissInfo() = viewModelScope.launch {
+        try {
+            prefs.dismissFarmInfo()
+        } catch (error: Exception) {
+            Log.e("MeoList", "could not hide farm info", error)
+            local.update { it.copy(event = FarmEvent.DismissInfoFailed) }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -191,6 +210,10 @@ fun FarmRoute(
             }
             FarmEvent.NotReady -> {
                 snackbar.showSnackbar(context.getString(R.string.farm_not_ready))
+                vm.consumeEvent()
+            }
+            FarmEvent.DismissInfoFailed -> {
+                snackbar.showSnackbar(context.getString(R.string.farm_info_dismiss_failed))
                 vm.consumeEvent()
             }
         }
@@ -239,7 +262,9 @@ fun FarmRoute(
                     },
                 )
             }
-            item { FarmInfoCard(snapshot) }
+            if (!state.farmInfoDismissed) {
+                item { FarmInfoCard(snapshot, onDismiss = vm::dismissInfo) }
+            }
             item {
                 SectionHeader(
                     title = stringResource(R.string.farm_achievements_title),
@@ -703,7 +728,7 @@ private fun PlotDetails(
 }
 
 @Composable
-private fun FarmInfoCard(snapshot: FarmSnapshot) {
+private fun FarmInfoCard(snapshot: FarmSnapshot, onDismiss: () -> Unit) {
     Card(
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
@@ -726,6 +751,13 @@ private fun FarmInfoCard(snapshot: FarmSnapshot) {
                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                     modifier = Modifier.weight(1f),
                 )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        Icons.Outlined.Close,
+                        stringResource(R.string.farm_info_dismiss),
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                    )
+                }
             }
             Text(
                 stringResource(R.string.farm_parallel_body),
