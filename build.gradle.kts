@@ -1,4 +1,5 @@
 import com.android.build.gradle.LibraryExtension
+import com.android.build.api.variant.LibraryAndroidComponentsExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -18,6 +19,13 @@ subprojects {
         compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
     }
     plugins.withId("com.android.library") {
+        extensions.configure<LibraryAndroidComponentsExtension> {
+            beforeVariants {
+                it.enableAndroidTest = fileTree("src/androidTest") {
+                    include("**/*.kt", "**/*.java")
+                }.files.isNotEmpty()
+            }
+        }
         extensions.configure<LibraryExtension> {
             compileSdk = 36
             defaultConfig {

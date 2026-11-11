@@ -10,6 +10,8 @@ import com.meolist.data.db.entity.ActivityGoalEntity
 import com.meolist.data.db.entity.ActivityTypeEntity
 import com.meolist.data.db.entity.CountdownEntity
 import com.meolist.data.db.entity.FarmPlotEntity
+import com.meolist.data.db.entity.FarmStateEntity
+import com.meolist.data.db.entity.FarmSlotEntity
 import com.meolist.data.db.entity.GoalReachedEntity
 import com.meolist.data.db.entity.HabitCheckInEntity
 import com.meolist.data.db.entity.HabitEntity
@@ -92,7 +94,9 @@ class BackupRoundTripTest {
         db.habitDao().upsertCheckIn(HabitCheckInEntity(9, 20_000, 1))
         db.countdownDao().insert(CountdownEntity(10, "Trip", 20_500, 0, false, false, false, 0, "", 1, 0))
         db.farmDao().insertPlot(FarmPlotEntity(11, 0, "carrot", 60, null))
-        db.farmDao().upsertNutrients(listOf(NutrientEntity("record:8", 11, 30, recordStart)))
+        db.farmDao().upsertNutrients(listOf(NutrientEntity("record:8", null, 30, recordStart, sequence = 1)))
+        db.farmDao().saveFarmState(FarmStateEntity(rulesVersion = 2, nextSequence = 1))
+        repeat(3) { db.farmDao().saveField(FarmSlotEntity(slot = it, sourceCutoff = 0)) }
         db.farmDao().insertHarvest(HarvestEntity(12, "carrot", 11, 300, 180))
         db.farmDao().insertAchievement(AchievementEntity("focus_1h", 400))
     }
@@ -121,7 +125,10 @@ class BackupRoundTripTest {
         assertEquals(1, db.timeRecordDao().getRunning().size)
         assertEquals(1, db.habitDao().getAllCheckIns().size)
         assertEquals("carrot", db.farmDao().getPlots().single().crop)
-        assertEquals(11L, db.farmDao().getNutrients().single().plotId)
+        assertNull(db.farmDao().getNutrients().single().plotId)
+        assertEquals(1L, db.farmDao().getNutrients().single().sequence)
+        assertEquals(1L, db.farmDao().getFarmState()?.nextSequence)
+        assertEquals(3, db.farmDao().getFields().size)
         assertEquals(1, db.farmDao().getHarvests().size)
         assertEquals(400L, db.farmDao().getAchievements().single().unlockedAt)
 

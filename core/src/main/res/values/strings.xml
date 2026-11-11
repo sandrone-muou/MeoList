@@ -31,4 +31,8 @@
     <string name="core_time_picker_invalid_minute">Enter a minute from 00 to 59</string>
     <string name="core_time_picker_hour_wheel">Hour wheel</string>
     <string name="core_time_picker_minute_wheel">Minute wheel</string>
+    <string name="core_calendar_previous">Previous period</string>
+    <string name="core_calendar_next">Next period</string>
+    <string name="core_calendar_month">Month</string>
+    <string name="core_calendar_week">Week</string>
 </resources>

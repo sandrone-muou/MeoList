@@ -32,4 +32,5 @@
     <plurals name="calendar_days_since">
         <item quantity="other">已经 %d 天</item>
     </plurals>
+    <string name="calendar_add_task">为这一天添加任务</string>
 </resources>

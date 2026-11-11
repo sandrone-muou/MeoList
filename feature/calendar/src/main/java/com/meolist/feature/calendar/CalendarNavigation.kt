@@ -12,6 +12,7 @@ fun NavGraphBuilder.calendarGraph(navController: NavController) {
             onOpenTask = { navController.navigate(Routes.taskDetail(it)) },
             onOpenHabit = { navController.navigate(Routes.habitDetail(it)) },
             onOpenCountdown = { navController.navigate(Routes.countdownEdit(it)) },
+            onCreateTask = { navController.navigate(Routes.taskCreate(it.toEpochDay())) },
         )
     }
 }

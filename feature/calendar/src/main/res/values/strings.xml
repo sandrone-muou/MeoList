@@ -35,4 +35,5 @@
         <item quantity="one">%d day since</item>
         <item quantity="other">%d days since</item>
     </plurals>
+    <string name="calendar_add_task">Add task for this day</string>
 </resources>

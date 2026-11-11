@@ -2,6 +2,7 @@ package com.meolist.domain.reminder
 
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.MINUTE_MS
+import com.meolist.domain.common.TransactionRunner
 import com.meolist.domain.task.TaskRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,6 +25,27 @@ class ReminderScheduler @Inject constructor(
 
     /** Replaces a task's reminders with [settings] (only kind/offset/minute are used). */
     suspend fun setTaskReminders(taskId: Long, settings: List<Reminder>) = mutex.withLock {
+        replaceTaskReminders(taskId, settings)
+        armNext()
+    }
+
+    /** Acquire the scheduler before Room so alarm callbacks cannot invert the lock order. */
+    suspend fun createTask(
+        transaction: TransactionRunner,
+        settings: List<Reminder>,
+        create: suspend () -> Long,
+    ): Long = mutex.withLock {
+        transaction.run {
+            val id = create()
+            if (settings.isNotEmpty()) {
+                replaceTaskReminders(id, settings)
+                armNext()
+            }
+            id
+        }
+    }
+
+    private suspend fun replaceTaskReminders(taskId: Long, settings: List<Reminder>) {
         val distinct = settings.fold(emptyList<Reminder>()) { acc, r -> if (acc.any { it.sameSetting(r) }) acc else acc + r }
         reminders.replaceForOwner(
             ReminderOwner.TASK,
@@ -31,7 +53,6 @@ class ReminderScheduler @Inject constructor(
             distinct.map { Reminder(ownerType = ReminderOwner.TASK, ownerId = taskId, kind = it.kind, offsetMin = it.offsetMin, minuteOfDay = it.minuteOfDay) },
         )
         recomputeTask(taskId)
-        armNext()
     }
 
     /** Call after a task (and its subtasks, if [withSubtasks]) changed in any way. */

@@ -1,20 +1,14 @@
 package com.meolist.feature.calendar
 
-import com.meolist.core.ui.accentColor
-import com.meolist.core.ui.components.MeoScaffold
-import com.meolist.core.ui.readableOn
-import com.meolist.core.theme.Meo
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,17 +20,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Celebration
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Timer
-import androidx.compose.material.icons.outlined.Today
-import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
@@ -45,18 +35,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,28 +47,36 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.meolist.core.theme.Meo
 import com.meolist.core.ui.ActivityIcons
+import com.meolist.core.ui.accentColor
+import com.meolist.core.ui.components.CalendarNavigator
+import com.meolist.core.ui.components.MeoScaffold
+import com.meolist.core.ui.components.MonthDateGrid
+import com.meolist.core.ui.components.WeekDateStrip
 import com.meolist.core.ui.currentLocale
 import com.meolist.core.ui.durationText
 import com.meolist.core.ui.longDate
+import com.meolist.core.ui.readableOn
 import com.meolist.core.ui.timeLabel
 import com.meolist.domain.calendar.CalendarDay
+import com.meolist.domain.calendar.CalendarPeriod
 import com.meolist.domain.calendar.CalendarRules
+import com.meolist.domain.calendar.TaskCalendarRules
 import com.meolist.domain.common.ApplicationScope
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.startOfDayMillis
@@ -123,7 +114,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-enum class CalendarMode { MONTH, WEEK }
+typealias CalendarMode = CalendarPeriod
 
 private data class CalendarInput(val mode: CalendarMode, val anchor: LocalDate, val selected: LocalDate)
 
@@ -153,10 +144,15 @@ class CalendarViewModel @Inject constructor(
     private val types: ActivityTypeRepository,
     prefs: AppPreferences,
     private val clock: Clock,
+    private val savedState: SavedStateHandle,
     @ApplicationScope private val appScope: CoroutineScope,
 ) : ViewModel() {
     private val input = MutableStateFlow(
-        CalendarInput(CalendarMode.MONTH, clock.today(), clock.today()),
+        CalendarInput(
+            savedState.get<String>("mode")?.let(CalendarMode::valueOf) ?: CalendarMode.MONTH,
+            savedState.get<Long>("anchor")?.let(LocalDate::ofEpochDay) ?: clock.today(),
+            savedState.get<Long>("selected")?.let(LocalDate::ofEpochDay) ?: clock.today(),
+        ),
     )
 
     private data class DayData(
@@ -208,27 +204,28 @@ class CalendarViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CalendarState())
 
+    private fun update(next: CalendarInput) {
+        savedState["mode"] = next.mode.name
+        savedState["anchor"] = next.anchor.toEpochDay()
+        savedState["selected"] = next.selected.toEpochDay()
+        input.value = next
+    }
+
     fun setMode(mode: CalendarMode) {
         val current = input.value
-        input.value = current.copy(mode = mode, anchor = current.selected)
+        update(current.copy(mode = mode, anchor = current.selected))
     }
 
     fun move(steps: Long) {
         val current = input.value
-        val anchor = when (current.mode) {
-            CalendarMode.MONTH -> current.anchor.plusMonths(steps)
-            CalendarMode.WEEK -> current.anchor.plusWeeks(steps)
-        }
-        input.value = current.copy(anchor = anchor, selected = anchor)
+        val date = TaskCalendarRules.move(current.selected, current.mode, steps)
+        update(current.copy(anchor = date, selected = date))
     }
 
-    fun goToday() {
-        val today = clock.today()
-        input.value = input.value.copy(anchor = today, selected = today)
-    }
+    fun goToday() = select(clock.today())
 
     fun select(day: LocalDate) {
-        input.value = input.value.copy(selected = day)
+        update(input.value.copy(anchor = day, selected = day))
     }
 
     fun toggleTask(task: Task) = appScope.launch {
@@ -247,50 +244,23 @@ fun CalendarRoute(
     onOpenTask: (Long) -> Unit,
     onOpenHabit: (Long) -> Unit,
     onOpenCountdown: (Long) -> Unit,
+    onCreateTask: (LocalDate) -> Unit,
     vm: CalendarViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
-    val locale = currentLocale()
 
     MeoScaffold(
         title = stringResource(R.string.calendar_title),
         onBack = onBack,
-        actions = {
-            IconButton(onClick = vm::goToday) {
-                Icon(Icons.Outlined.Today, stringResource(R.string.calendar_today))
-            }
-        },
     ) { padding ->
         Column(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = com.meolist.core.theme.Meo.spacing.screen),
+                .padding(horizontal = Meo.spacing.screen),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-            ) {
-                IconButton(onClick = { vm.move(-1) }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, stringResource(R.string.calendar_previous))
-                }
-                Text(
-                    title(state, locale),
-                    style = if (state.mode == CalendarMode.WEEK) {
-                        MaterialTheme.typography.titleMedium
-                    } else {
-                        MaterialTheme.typography.titleLarge
-                    },
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                ModeSwitch(state.mode, onSelect = vm::setMode)
-                IconButton(onClick = { vm.move(1) }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, stringResource(R.string.calendar_next))
-                }
-            }
+            CalendarNavigator(state.anchor, state.mode, state.firstDayOfWeek, vm::setMode, vm::move, vm::goToday)
 
             if (state.mode == CalendarMode.MONTH) {
                 Surface(
@@ -327,6 +297,7 @@ fun CalendarRoute(
                     onOpenHabit = onOpenHabit,
                     onToggleHabit = { habit -> vm.toggleHabit(habit.id, day.date) },
                     onOpenCountdown = onOpenCountdown,
+                    onCreateTask = { onCreateTask(day.date) },
                 )
             }
             Spacer(Modifier.height(16.dp))
@@ -334,143 +305,16 @@ fun CalendarRoute(
     }
 }
 
-private fun title(state: CalendarState, locale: java.util.Locale): String {
-    val formatter = java.time.format.DateTimeFormatter.ofPattern(
-        android.text.format.DateFormat.getBestDateTimePattern(locale, "yMMMM"),
-        locale,
-    )
-    return when (state.mode) {
-        CalendarMode.MONTH -> formatter.format(state.anchor)
-        CalendarMode.WEEK -> {
-            val days = CalendarRules.weekDays(state.anchor, state.firstDayOfWeek)
-            val short = java.time.format.DateTimeFormatter.ofPattern(
-                android.text.format.DateFormat.getBestDateTimePattern(locale, "MMMd"),
-                locale,
-            )
-            "${short.format(days.first())} – ${short.format(days.last())}"
-        }
-    }
-}
-
-@Composable
-private fun ModeSwitch(mode: CalendarMode, onSelect: (CalendarMode) -> Unit) {
-    Row(
-        Modifier
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .padding(2.dp),
-    ) {
-        CalendarMode.entries.forEach { item ->
-            val selected = mode == item
-            Box(
-                Modifier
-                    .clip(CircleShape)
-                    .background(if (selected) MaterialTheme.colorScheme.surface else Color.Transparent)
-                    .clickable { onSelect(item) }
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-            ) {
-                Text(
-                    stringResource(if (item == CalendarMode.MONTH) R.string.calendar_month else R.string.calendar_week),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
 @Composable
 private fun MonthGrid(state: CalendarState, onSelect: (LocalDate) -> Unit) {
-    val locale = currentLocale()
-    Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().padding(bottom = 2.dp)) {
-            (0 until 7).forEach { i ->
-                val day = DayOfWeek.of((state.firstDayOfWeek.value - 1 + i) % 7 + 1)
-                Text(
-                    day.getDisplayName(TextStyle.NARROW, locale),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-        val byDate = state.days.associateBy { it.date }
-        val month = state.month
-        state.days.map { it.date }.chunked(7).forEach { week ->
-            Row(Modifier.fillMaxWidth()) {
-                week.forEach { date ->
-                    val inMonth = YearMonth.from(date) == month
-                    DayCell(
-                        date = date,
-                        day = byDate[date],
-                        today = state.today,
-                        selected = state.selected,
-                        inMonth = inMonth,
-                        onSelect = onSelect,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DayCell(
-    date: LocalDate,
-    day: CalendarDay?,
-    today: LocalDate,
-    selected: LocalDate,
-    inMonth: Boolean,
-    onSelect: (LocalDate) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val isSelected = date == selected
-    val hasTask = day?.tasks?.isNotEmpty() == true
-    val hasHabit = day?.habits?.isNotEmpty() == true
-    val hasCountdown = day?.countdowns?.isNotEmpty() == true
-    val hasTracked = (day?.trackedMs ?: 0) > 0
-
-    Box(
-        modifier
-            .height(Meo.layout.calendarCell)
-            .clickable(enabled = inMonth) { onSelect(date) },
-    ) {
-        Box(
-            Modifier
-                .align(Alignment.Center)
-                .size(30.dp)
-                .clip(CircleShape)
-                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
-                .then(
-                    if (date == today && !isSelected) {
-                        Modifier.border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                    } else Modifier,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.labelMedium,
-                color = when {
-                    !inMonth -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
-                    isSelected -> MaterialTheme.colorScheme.onPrimary
-                    date == today -> MaterialTheme.colorScheme.primary
-                    else -> MaterialTheme.colorScheme.onSurface
-                },
-            )
-        }
-        if (inMonth) {
-            Row(
-                Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                if (hasTask) SmallDot(MaterialTheme.colorScheme.primary)
-                if (hasHabit) SmallDot(MaterialTheme.colorScheme.tertiary)
-                if (hasCountdown) SmallDot(MaterialTheme.colorScheme.secondary)
-                if (hasTracked) SmallDot(MaterialTheme.colorScheme.outline)
-            }
+    val byDate = state.days.associateBy { it.date }
+    MonthDateGrid(state.month, state.firstDayOfWeek, state.today, state.selected, onSelect) { date ->
+        val day = byDate[date]
+        Row(horizontalArrangement = Arrangement.spacedBy(Meo.spacing.xs)) {
+            if (day?.tasks?.isNotEmpty() == true) SmallDot(MaterialTheme.colorScheme.primary)
+            if (day?.habits?.isNotEmpty() == true) SmallDot(MaterialTheme.colorScheme.tertiary)
+            if (day?.countdowns?.isNotEmpty() == true) SmallDot(MaterialTheme.colorScheme.secondary)
+            if ((day?.trackedMs ?: 0) > 0) SmallDot(MaterialTheme.colorScheme.outline)
         }
     }
 }
@@ -512,48 +356,13 @@ private fun Legend(modifier: Modifier = Modifier) {
 
 @Composable
 private fun WeekChart(state: CalendarState, onSelect: (LocalDate) -> Unit) {
-    val locale = currentLocale()
     val axisWidth = 22.dp
     val chartHeight = Meo.layout.weekChartHeight
     val typeColors = state.types.associate { it.id to accentColor(it.color) }
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth()) {
             Spacer(Modifier.width(axisWidth))
-            state.days.forEach { day ->
-                val selected = day.date == state.selected
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onSelect(day.date) }
-                        .padding(vertical = 2.dp),
-                ) {
-                    Text(
-                        day.date.dayOfWeek.getDisplayName(TextStyle.NARROW, locale),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Box(
-                        Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            day.date.dayOfMonth.toString(),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = when {
-                                selected -> MaterialTheme.colorScheme.onPrimary
-                                day.date == state.today -> MaterialTheme.colorScheme.primary
-                                else -> MaterialTheme.colorScheme.onSurface
-                            },
-                        )
-                    }
-                }
-            }
+            WeekDateStrip(state.anchor, state.firstDayOfWeek, state.today, state.selected, onSelect, Modifier.weight(1f))
         }
         Spacer(Modifier.height(4.dp))
         Row(Modifier.fillMaxWidth()) {
@@ -635,6 +444,7 @@ private fun Agenda(
     onOpenHabit: (Long) -> Unit,
     onToggleHabit: (Habit) -> Unit,
     onOpenCountdown: (Long) -> Unit,
+    onCreateTask: () -> Unit,
 ) {
     val locale = currentLocale()
     Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
@@ -644,6 +454,11 @@ private fun Agenda(
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f),
             )
+            IconButton(onClick = onCreateTask) {
+                Icon(Icons.Outlined.Add, stringResource(R.string.calendar_add_task))
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
             if (day.date == today) {
                 Text(
                     stringResource(com.meolist.core.R.string.core_today),
@@ -801,8 +616,6 @@ private fun TaskAgendaRow(task: Task, onOpen: () -> Unit, onToggle: () -> Unit) 
         Text(
             task.title,
             style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
             textDecoration = if (task.isDone) TextDecoration.LineThrough else null,
             color = if (task.isDone) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),

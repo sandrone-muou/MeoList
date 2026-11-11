@@ -12,6 +12,15 @@ import com.meolist.feature.tasks.quadrant.QuadrantRoute
 import com.meolist.feature.tasks.search.SearchRoute
 
 fun NavGraphBuilder.tasksGraph(navController: NavController) {
+    composable(
+        Routes.TASK_CREATE,
+        arguments = listOf(navArgument(Routes.ARG_DAY) {
+            type = NavType.LongType
+            defaultValue = Routes.NO_DAY
+        }),
+    ) {
+        TaskCreateRoute(onBack = { navController.popBackStack() })
+    }
     composable(Routes.TASKS) {
         TasksRoute(
             onOpenTask = { navController.navigate(Routes.taskDetail(it)) },

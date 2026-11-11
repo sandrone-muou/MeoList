@@ -48,7 +48,9 @@ class BackupCodecTest {
         checkIns = listOf(CheckInDto(9, 20_000, 1)),
         countdowns = listOf(CountdownDto(10, "Trip", 20_100, 0, false, false, false, 3, "", 1, 0)),
         farmPlots = listOf(FarmPlotDto(11, 0, "carrot", 60, null)),
-        nutrients = listOf(NutrientDto("record:8", 11, 10, 60)),
+        nutrients = listOf(NutrientDto("record:8", null, 10, 60, sequence = 1)),
+        farmState = FarmStateDto(rulesVersion = 2, nextSequence = 1),
+        farmFields = (0..2).map { FarmFieldDto(it, 0) },
         harvests = listOf(HarvestDto(12, "carrot", 11, 70, 180)),
         achievements = listOf(AchievementDto("first_harvest", 70)),
         settings = SettingsDto(
@@ -69,6 +71,17 @@ class BackupCodecTest {
     }
 
     @Test
+    fun formatOneStillImportsWithoutFarmState() {
+        val file = sample().copy(format = BackupFile.LEGACY_FORMAT, farmState = null, farmFields = emptyList())
+        assertEquals(file, BackupCodec.decode(BackupCodec.encode(file)))
+    }
+
+    @Test
+    fun formatTwoRequiresFarmState() {
+        assertThrows(BackupFormatException::class.java) { BackupCodec.decode(BackupCodec.encode(sample().copy(farmState = null))) }
+    }
+
+    @Test
     fun emptyObjectIsRejected() {
         assertThrows(BackupFormatException::class.java) { BackupCodec.decode("{}") }
     }
@@ -81,7 +94,7 @@ class BackupCodecTest {
 
     @Test
     fun unknownFieldsAreIgnored() {
-        val json = BackupCodec.encode(sample()).replaceFirst("\"format\":1", "\"format\":1,\"future\":true")
+        val json = BackupCodec.encode(sample()).replaceFirst("\"format\":${BackupFile.FORMAT}", "\"format\":${BackupFile.FORMAT},\"future\":true")
         assertEquals(sample(), BackupCodec.decode(json))
     }
 

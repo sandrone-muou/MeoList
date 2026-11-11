@@ -44,11 +44,13 @@ class FarmInteractorTest {
         )
     }
 
-    private suspend fun addPlot(slot: Int, crop: Crop = Crop.CARROT): Long =
-        farm.insertPlot(FarmPlot(slot = slot, crop = crop, plantedAt = 0))
+    private suspend fun addPlot(slot: Int, crop: Crop = Crop.CARROT): Long {
+        interactor.sync()
+        return farm.insertPlot(FarmPlot(slot = slot, crop = crop, plantedAt = clock.now()))
+    }
 
     @Test
-    fun newNutrientsGoToTheLowestSlotFirst() = runTest {
+    fun newNutrientsGrowEveryUnlockedField() = runTest {
         val lowest = addPlot(0)
         val second = addPlot(1)
 
@@ -56,9 +58,10 @@ class FarmInteractorTest {
         interactor.sync()
 
         val entry = farm.getNutrients().single()
-        assertEquals(lowest, entry.plotId)
+        assertNull(entry.plotId)
+        assertEquals(60, growth(farm.getPlots().first { it.id == lowest }))
         assertEquals(60, entry.amount)
-        assertEquals(0, FarmRules.growth(farm.getPlots().first { it.id == second }, farm.getNutrients()))
+        assertEquals(60, growth(farm.getPlots().first { it.id == second }))
     }
 
     @Test
@@ -76,44 +79,31 @@ class FarmInteractorTest {
         tracker.deleteRecord(second)
         interactor.sync()
         assertEquals(30, totalGrowth())
-        assertEquals(1, farm.getNutrients().size)
+        assertEquals(2, farm.getNutrients().size)
+        assertEquals(1, farm.getNutrients().count { it.amount == 0 })
     }
 
     @Test
-    fun fullPlotsOverflowIntoCompostAndPlantingCanUseIt() = runTest {
-        addPlot(0)
-        addPlot(1)
-        addPlot(2)
-        repeat(9) { addRecord(8 + it, 70) }
+    fun ripePlotsStoreSurplusAndReplantingUsesTheSameFieldsBalance() = runTest {
+        repeat(3) { addPlot(it) }
+        addRecord(9, 120)
+        addRecord(12, 120)
         interactor.sync()
-
         val plots = farm.getPlots()
-        plots.forEach { assertEquals(210, FarmRules.growth(it, farm.getNutrients())) }
-        assertEquals(0, compost())
-
+        plots.forEach { assertEquals(180, growth(it)) }
         addRecord(20, 50)
         interactor.sync()
-        assertEquals(50, compost())
-        assertNull(farm.getNutrients().first { it.amount == 50 }.plotId)
-
-        // The ripe crops are harvested, which frees a slot but leaves the compost alone.
-        plots.forEach { plot ->
-            val result = interactor.harvest(plot.id)
-            assertTrue(result is HarvestResult.Harvested)
-        }
+        assertEquals(290L, available(0))
+        plots.forEach { assertTrue(interactor.harvest(it.id) is HarvestResult.Harvested) }
         assertEquals(3, farm.getHarvests().size)
-        assertEquals(50, compost())
-
-        val replanted = interactor.plant(0, Crop.CARROT, useCompost = true)
-        assertTrue(replanted is PlantResult.Planted)
-        assertEquals(50, (replanted as PlantResult.Planted).compostUsed)
-        assertEquals(0, compost())
-        val newPlot = farm.getPlots().first { it.id == replanted.plotId }
-        assertEquals(50, FarmRules.growth(newPlot, farm.getNutrients()))
+        repeat(3) { assertEquals(110L, available(it)) }
+        val replanted = interactor.plant(0, Crop.CARROT) as PlantResult.Planted
+        assertEquals(110L, replanted.storedNutrients)
+        assertEquals(110, growth(farm.getPlots().first { it.id == replanted.plotId }))
     }
 
     @Test
-    fun habitsTasksAndGoalsBecomeCompost() = runTest {
+    fun habitsTasksAndGoalsCreditEveryUnlockedField() = runTest {
         val today = LocalDate.of(2026, 10, 24)
         val habitId = habits.saveHabit(Habit(name = "Read", dailyTarget = 2, startDay = today))
         habits.setCheckIn(habitId, today, 1)
@@ -126,12 +116,12 @@ class FarmInteractorTest {
         assertEquals(20, farm.getNutrients().single { it.sourceKey.startsWith("goal:") }.amount)
         // The countable habit is not finished yet.
         assertTrue(farm.getNutrients().none { it.sourceKey.startsWith("habit:") })
-        assertEquals(40, compost())
+        repeat(3) { assertEquals(40L, available(it)) }
 
         habits.setCheckIn(habitId, today, 2)
         interactor.sync()
         assertEquals(5, farm.getNutrients().single { it.sourceKey.startsWith("habit:") }.amount)
-        assertEquals(45, compost())
+        repeat(3) { assertEquals(45L, available(it)) }
     }
 
     @Test
@@ -152,8 +142,8 @@ class FarmInteractorTest {
         assertTrue(Achievement.FIRST_HARVEST.key in farm.getUnlockedAchievements())
 
         assertEquals(HarvestResult.Empty, interactor.harvest(plotId))
-        // The nutrients stay with the harvested plot as history.
-        assertEquals(180, totalGrowth())
+        assertEquals(0, totalGrowth())
+        assertEquals(0L, available(0))
     }
 
     @Test
@@ -161,7 +151,7 @@ class FarmInteractorTest {
         val plotId = addPlot(0)
         addRecord(9, 199)
         interactor.sync()
-        assertTrue(FarmRules.growth(farm.getPlots().first { it.id == plotId }, farm.getNutrients()) > Crop.CARROT.need)
+        assertEquals(Crop.CARROT.need, growth(farm.getPlots().first { it.id == plotId }))
 
         val harvested = interactor.harvest(plotId)
 
@@ -188,7 +178,8 @@ class FarmInteractorTest {
 
         tracker.deleteRecord(id)
         interactor.sync()
-        assertEquals(0, farm.getNutrients().size)
+        assertEquals(0, farm.getNutrients().sumOf { it.amount })
+        assertEquals(1, farm.getNutrients().size)
         assertTrue(Achievement.FOCUS_1H.key in farm.getUnlockedAchievements())
     }
 
@@ -203,7 +194,15 @@ class FarmInteractorTest {
     }
 
     private suspend fun totalGrowth(): Int =
-        farm.getPlots().sumOf { FarmRules.growth(it, farm.getNutrients()) }
+        farm.getPlots().filterNot { it.isHarvested }.sumOf { growth(it) }
 
-    private suspend fun compost(): Int = farm.getNutrients().filter { it.plotId == null }.sumOf { it.amount }
+    private suspend fun available(slot: Int): Long {
+        val cutoff = farm.getFields().first { it.slot == slot }.sourceCutoff
+        val ids = farm.getPlots().filter { it.slot == slot }.map { it.id }.toSet()
+        val spent = farm.getHarvests().filter { it.plotId in ids }.sumOf { it.nutrients.toLong() }
+        return farm.getNutrients().filter { it.sequence > cutoff }.sumOf { it.amount.toLong() } - spent
+    }
+
+    private suspend fun growth(plot: FarmPlot): Int =
+        minOf(plot.crop.need.toLong(), available(plot.slot).coerceAtLeast(0)).toInt()
 }

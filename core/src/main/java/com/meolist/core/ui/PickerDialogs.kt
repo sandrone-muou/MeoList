@@ -218,7 +218,7 @@ fun MeoTimePickerDialog(
                                 enabled = mode == TimePickerMode.WHEEL || inputValid,
                                 onClick = {
                                     if (mode == TimePickerMode.INPUT && inputValid) {
-                                        hour = timePickerHourForIndex(
+                                        hour = if (is24h) requireNotNull(parsedHour) else timePickerHourForIndex(
                                             requireNotNull(parsedHour) % 12,
                                             false,
                                             isPm,

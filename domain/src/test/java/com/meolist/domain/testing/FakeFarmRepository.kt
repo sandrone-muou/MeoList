@@ -2,6 +2,9 @@ package com.meolist.domain.testing
 
 import com.meolist.domain.farm.AchievementState
 import com.meolist.domain.farm.Achievement
+import com.meolist.domain.farm.FarmField
+import com.meolist.domain.farm.FarmState
+import com.meolist.domain.farm.LegacyFarmSummary
 import com.meolist.domain.farm.FarmPlot
 import com.meolist.domain.farm.FarmRepository
 import com.meolist.domain.farm.HarvestRecord
@@ -16,6 +19,31 @@ class FakeFarmRepository : FarmRepository {
     val nutrients = MutableStateFlow<List<NutrientEntry>>(emptyList())
     val harvests = MutableStateFlow<List<HarvestRecord>>(emptyList())
     val unlocked = MutableStateFlow<Map<String, Long>>(emptyMap())
+    val fields = MutableStateFlow<List<FarmField>>(emptyList())
+    val state = MutableStateFlow<FarmState?>(null)
+    val legacy = MutableStateFlow<LegacyFarmSummary?>(null)
+    override fun observeFields(): Flow<List<FarmField>> = fields
+    override fun observeFarmState(): Flow<FarmState?> = state
+    override fun observeLegacyFarmSummary(): Flow<LegacyFarmSummary?> = legacy
+    override suspend fun getFields(): List<FarmField> = fields.value
+    override suspend fun getFarmState(): FarmState? = state.value
+    override suspend fun getLegacyFarmSummary(): LegacyFarmSummary? = legacy.value
+    override suspend fun saveField(field: FarmField) {
+        fields.value = (fields.value.filterNot { it.slot == field.slot } + field).sortedBy { it.slot }
+    }
+    override suspend fun initialize(initialSources: List<NutrientEntry>, at: Long): Boolean {
+        if (state.value != null) return false
+        if (plots.value.isNotEmpty() || nutrients.value.isNotEmpty() || harvests.value.isNotEmpty() || unlocked.value.isNotEmpty()) {
+            legacy.value = LegacyFarmSummary(at, plots.value.size, harvests.value.size, unlocked.value.size)
+        }
+        plots.value = emptyList()
+        harvests.value = emptyList()
+        unlocked.value = emptyMap()
+        nutrients.value = initialSources.sortedBy { it.sourceKey }.mapIndexed { index, entry -> entry.copy(plotId = null, sequence = index + 1L) }
+        fields.value = (0..2).map { FarmField(it, 0) }
+        state.value = FarmState(2, nutrients.value.size.toLong())
+        return true
+    }
     private var nextPlotId = 1L
     private var nextHarvestId = 1L
 
@@ -46,15 +74,9 @@ class FakeFarmRepository : FarmRepository {
         return id
     }
 
-    override suspend fun saveNutrients(entries: List<NutrientEntry>, removedKeys: List<String>) {
-        nutrients.value = entries.filter { it.sourceKey !in removedKeys }
-    }
-
-    override suspend fun attachCompost(plotId: Long): Int {
-        val pool = nutrients.value.filter { it.plotId == null }
-        if (pool.isEmpty()) return 0
-        nutrients.value = nutrients.value.map { if (it.plotId == null) it.copy(plotId = plotId) else it }
-        return pool.sumOf { it.amount }
+    override suspend fun saveNutrients(entries: List<NutrientEntry>, nextSequence: Long) {
+        nutrients.value = entries
+        state.value = state.value!!.copy(nextSequence = nextSequence)
     }
 
     override suspend fun unlockAchievement(key: String, at: Long): Boolean {

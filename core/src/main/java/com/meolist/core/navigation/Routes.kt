@@ -21,6 +21,8 @@ object Routes {
     const val TASK_SEARCH = "tasks/search"
     const val QUADRANT = "tasks/quadrant"
     const val LIST_MANAGE = "tasks/lists"
+    const val TASK_CREATE = "tasks/new?day={day}"
+    fun taskCreate(epochDay: Long) = "tasks/new?day=$epochDay"
 
     // Tracker
     const val ACTIVITY_TYPE_EDIT = "tracker/type/{$ARG_ID}"

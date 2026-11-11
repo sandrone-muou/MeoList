@@ -14,13 +14,14 @@ focus time. Everything stays on the device.
 
 ## Features
 
-- **Tasks**: lists / folders, subtasks, priorities, tags, due dates, recurring tasks, custom reminders when creating a task, search, trash
+- **Tasks**: lists / folders, subtasks, priorities, tags, due dates, recurring tasks, custom reminders when creating a task, search, trash; list / month / week views with tasks added for the selected calendar date
 - **Activity timing**: custom activity types, one-tap start / stop, several timers at once, task linking, daily / weekly / monthly duration goals
 - **Habits**: every day / selected weekdays / N times a week, streaks, weekly progress and a check-in calendar
 - **Countdowns**: count down or up, optional yearly repeat
 - **Statistics**: day / week / month / year views; month view switches between heatmap and bars; tracked time and completed tasks, with editable records
-- **Calendar + quadrants**: month / week views; the agenda separates tasks, habits, countdowns and timer records; tag-bound quadrants place tasks by tag, with priority / due-date classification for untagged tasks
+- **Calendar + quadrants**: month / week views; the agenda separates tasks, habits, countdowns and timer records and can add tasks for the selected day; tag-bound quadrants place tasks by tag, with priority / due-date classification for untagged tasks
 - **Timing farm**: focus time, completed tasks and habit check-ins award nutrients to every unlocked field, each with its own balance
+- **More**: full-width grouped navigation lists with descriptions
 - **Data**: local-only storage; JSON backup / restore and CSV export; timing, reminder, week-start and month-chart preferences
 
 ## Download

@@ -1,29 +1,37 @@
 package com.meolist.feature.tasks
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.meolist.domain.calendar.CalendarPeriod
+import com.meolist.domain.calendar.TaskCalendarRules
 import com.meolist.domain.common.Clock
 import com.meolist.domain.common.today
-import com.meolist.domain.reminder.Reminder
 import com.meolist.domain.reminder.ReminderOwner
 import com.meolist.domain.reminder.ReminderRepository
 import com.meolist.domain.settings.AppPreferences
 import com.meolist.domain.task.ListFolder
-import com.meolist.domain.task.Priority
 import com.meolist.domain.task.RepeatAdvance
 import com.meolist.domain.task.Tag
 import com.meolist.domain.task.TagRepository
 import com.meolist.domain.task.Task
+import com.meolist.domain.task.TaskCreator
+import com.meolist.domain.task.TaskDraft
 import com.meolist.domain.task.TaskFilter
 import com.meolist.domain.task.TaskGroup
 import com.meolist.domain.task.TaskGrouping
 import com.meolist.domain.task.TaskInteractor
+import com.meolist.domain.task.TaskItem
 import com.meolist.domain.task.TaskList
 import com.meolist.domain.task.TaskListRepository
 import com.meolist.domain.task.TaskRepository
 import com.meolist.domain.task.TaskSnapshot
 import com.meolist.domain.tracker.TimeRecordRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.ZoneId
+import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,13 +44,28 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
-import javax.inject.Inject
+
+enum class TaskView { LIST, CALENDAR }
+
+private data class TaskPresentation(
+    val view: TaskView,
+    val period: CalendarPeriod,
+    val selected: LocalDate,
+)
+
+private data class PresentedSnapshot(
+    val snapshot: TaskSnapshot,
+    val presentation: TaskPresentation,
+    val firstDayOfWeek: DayOfWeek,
+)
 
 data class TasksUiState(
     val loading: Boolean = true,
+    val view: TaskView = TaskView.LIST,
+    val calendarPeriod: CalendarPeriod = CalendarPeriod.MONTH,
+    val selectedDate: LocalDate = LocalDate.now(),
+    val firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
+    val calendarTasks: Map<LocalDate, List<TaskItem>> = emptyMap(),
     val filter: TaskFilter = TaskFilter.Today,
     val groups: List<TaskGroup> = emptyList(),
     val lists: List<TaskList> = emptyList(),
@@ -80,9 +103,29 @@ class TasksViewModel @Inject constructor(
     reminderRepo: ReminderRepository,
     timeRecords: TimeRecordRepository,
     private val clock: Clock,
+    private val creator: TaskCreator,
+    private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
     private val filter = MutableStateFlow<TaskFilter?>(null)
+    private val presentation = MutableStateFlow(TaskPresentation(
+        view = savedState.get<String>("taskView")?.let { TaskView.valueOf(it) } ?: TaskView.LIST,
+        period = savedState.get<String>("calendarPeriod")?.let { CalendarPeriod.valueOf(it) } ?: CalendarPeriod.MONTH,
+        selected = savedState.get<Long>("selectedDate")?.let(LocalDate::ofEpochDay) ?: clock.today(),
+    ))
+
+    private fun present(next: TaskPresentation) {
+        savedState["taskView"] = next.view.name
+        savedState["calendarPeriod"] = next.period.name
+        savedState["selectedDate"] = next.selected.toEpochDay()
+        presentation.value = next
+    }
+
+    fun selectView(view: TaskView) = present(presentation.value.copy(view = view))
+    fun selectDate(date: LocalDate) = present(presentation.value.copy(selected = date))
+    fun selectPeriod(period: CalendarPeriod) = present(presentation.value.copy(period = period))
+    fun moveCalendar(steps: Long) = selectDate(TaskCalendarRules.move(presentation.value.selected, presentation.value.period, steps))
+    fun goToday() = selectDate(clock.today())
 
     /** Re-emits when the date changes so "Today" stays correct across midnight. */
     private val today = flow {
@@ -101,7 +144,9 @@ class TasksViewModel @Inject constructor(
 
     val state: StateFlow<TasksUiState> = combine(
         filter.filterNotNull(),
-        snapshot,
+        combine(snapshot, presentation, prefs.settings) { snap, p, settings ->
+            PresentedSnapshot(snap, p, settings.firstDayOfWeek)
+        },
         combine(
             taskRepo.observeTrash(),
             listRepo.observeFolders(),
@@ -109,7 +154,8 @@ class TasksViewModel @Inject constructor(
             timeRecords.observeRunning().map { running -> running.mapNotNull { it.taskId }.toSet() },
         ) { t, f, r, timing -> Extras(t, f, r, timing) },
         today,
-    ) { rawFilter, snap, (trash, folders, reminderIds, timingIds), day ->
+    ) { rawFilter, presented, (trash, folders, reminderIds, timingIds), day ->
+        val snap = presented.snapshot
         val zone = clock.zone()
         val current = when (rawFilter) {
             is TaskFilter.OfList -> rawFilter.takeIf { f -> snap.lists.any { it.id == f.listId } }
@@ -125,18 +171,32 @@ class TasksViewModel @Inject constructor(
             snap.lists.map { TaskFilter.OfList(it.id) } + snap.tags.map { TaskFilter.OfTag(it.id) }
         TasksUiState(
             loading = false,
+            view = presented.presentation.view,
+            calendarPeriod = presented.presentation.period,
+            selectedDate = presented.presentation.selected,
+            firstDayOfWeek = presented.firstDayOfWeek,
+            calendarTasks = TaskCalendarRules.byDate(snap, day, zone),
             filter = current,
             groups = groups,
             lists = snap.lists,
             folders = folders,
             tags = snap.tags,
-            counts = countFilters.associate { it.key() to TaskGrouping.openCount(it, snap, day, zone) },
+            counts = countFilters.associate { it.key() to TaskGrouping.openCount(it, snap, day, zone) } + mapOf(
+                TaskFilter.Completed.key() to TaskGrouping.group(TaskFilter.Completed, snap, day, zone).sumOf { it.items.size },
+                TaskFilter.Trash.key() to TaskGrouping.trash(trash, snap.lists).sumOf { it.items.size },
+            ),
             today = day,
             zone = zone,
             reminderTaskIds = reminderIds,
             timingTaskIds = timingIds,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TasksUiState())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TasksUiState(
+        view = presentation.value.view,
+        calendarPeriod = presentation.value.period,
+        selectedDate = presentation.value.selected,
+        today = clock.today(),
+        zone = clock.zone(),
+    ))
 
     init {
         viewModelScope.launch { filter.value = TaskFilter.fromKey(prefs.lastTaskFilter.first()) }
@@ -157,41 +217,8 @@ class TasksViewModel @Inject constructor(
         }
     }
 
-    fun addTask(
-        title: String,
-        date: LocalDate?,
-        time: LocalTime?,
-        priority: Priority,
-        listId: Long?,
-        tagIds: Set<Long>,
-        reminder: Reminder?,
-    ) {
-        if (title.isBlank()) return
-        val zone = clock.zone()
-        val dueAt = date?.let { dueMillis(it, time, zone) }
-        viewModelScope.launch {
-            val id = interactor.add(
-                title = title,
-                listId = listId,
-                dueAt = dueAt,
-                allDay = time == null,
-                priority = priority,
-                tagIds = tagIds,
-            )
-            if (reminder != null && dueAt != null) {
-                interactor.setReminders(
-                    id,
-                    listOf(
-                        reminder.copy(
-                            ownerType = ReminderOwner.TASK,
-                            ownerId = id,
-                            nextFireAt = null,
-                            snoozedUntil = null,
-                        ),
-                    ),
-                )
-            }
-        }
+    suspend fun addTask(draft: TaskDraft) {
+        creator.create(draft)
     }
 
     private val _lastAdvance = MutableStateFlow<RepeatAdvance?>(null)

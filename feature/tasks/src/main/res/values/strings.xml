@@ -197,4 +197,14 @@
     <string name="schedule_due_time_hint">Due time</string>
     <string name="schedule_no_date">No date</string>
     <string name="tasks_reminder_due_context_timed">Due %1$s at %2$s</string>
+    <string name="tasks_view_list">List</string>
+    <string name="tasks_view_calendar">Calendar</string>
+    <string name="tasks_choose_filter">Task categories</string>
+    <string name="tasks_smart_filters">Smart filters</string>
+    <string name="tasks_calendar_empty">No tasks on this day</string>
+    <string name="tasks_calendar_hint">Add a task for the selected date. Tasks without a date are available in List.</string>
+    <string name="tasks_save_failed">Could not save the task. Your input is kept; please try again.</string>
+    <string name="tasks_saving">Saving…</string>
+    <string name="tasks_created_for_date">Task added for %1$s</string>
+    <string name="tasks_created_no_date">Task added without a date</string>
 </resources>

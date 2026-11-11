@@ -3,6 +3,8 @@ package com.meolist.feature.tasks
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,10 +21,10 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
@@ -31,8 +33,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.meolist.core.theme.Meo
 import com.meolist.core.ui.ColorDot
 import com.meolist.core.ui.relativeDateLabel
 import com.meolist.core.ui.timeLabel
@@ -121,6 +123,7 @@ internal fun TaskCheckbox(done: Boolean, priority: Priority, onCheckedChange: (B
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun TaskRow(
     item: TaskItem,
@@ -142,7 +145,7 @@ internal fun TaskRow(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(start = 4.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
     ) {
         TaskCheckbox(task.isDone, task.priority, onToggle, enabled = !task.isDeleted)
         Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
@@ -151,15 +154,14 @@ internal fun TaskRow(
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (task.isDone) muted else MaterialTheme.colorScheme.onSurface,
                 textDecoration = if (task.isDone) TextDecoration.LineThrough else null,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
             )
             val hasMeta = task.dueAt != null || (showList && item.list != null) || item.subtaskTotal > 0 ||
                 item.tags.isNotEmpty() || task.note.isNotBlank() || repeats || hasReminder || isTiming
             if (hasMeta) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Meo.spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(Meo.spacing.xs),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     if (isTiming) {
                         Icon(Icons.Outlined.Timer, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
@@ -187,7 +189,13 @@ internal fun TaskRow(
                     if (task.note.isNotBlank()) {
                         Icon(Icons.AutoMirrored.Outlined.Notes, null, Modifier.size(14.dp), tint = muted)
                     }
-                    item.tags.take(3).forEach { tag -> MetaText("#${tag.name}", Color(tag.color)) }
+                    item.tags.forEach { tag ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ColorDot(tag.color, size = Meo.spacing.sm)
+                            Spacer(Modifier.width(Meo.spacing.xs))
+                            MetaText("#${tag.name}", muted)
+                        }
+                    }
                     if (showList && item.list != null) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             ColorDot(item.list!!.color, size = 8.dp)
@@ -198,13 +206,13 @@ internal fun TaskRow(
                 }
             }
         }
-        trailing?.invoke()
+        if (trailing != null) Column { trailing() }
     }
 }
 
 @Composable
 private fun MetaText(text: String, color: Color) {
-    Text(text, style = MaterialTheme.typography.labelMedium, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Text(text, style = MaterialTheme.typography.labelMedium, color = color)
 }
 
 /**
