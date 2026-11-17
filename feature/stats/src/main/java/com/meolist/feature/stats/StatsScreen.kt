@@ -263,7 +263,7 @@ class StatsViewModel @Inject constructor(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatsRoute(onBack: () -> Unit, vm: StatsViewModel = hiltViewModel()) {
+fun StatsRoute(onBack: (() -> Unit)?, vm: StatsViewModel = hiltViewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val locale = currentLocale()
     var selectedBar by rememberSaveable { mutableStateOf(-1) }

@@ -167,6 +167,7 @@ class HabitsViewModel @Inject constructor(
 fun HabitsRoute(
     onOpen: (Long) -> Unit,
     onAdd: () -> Unit,
+    onBack: (() -> Unit)? = null,
     vm: HabitsViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -175,6 +176,7 @@ fun HabitsRoute(
     var deleting by remember { mutableStateOf<Habit?>(null) }
 
     MeoScaffold(
+        onBack = onBack,
         title = stringResource(R.string.habits_title),
         large = true,
         actions = {

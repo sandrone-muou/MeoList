@@ -1,5 +1,7 @@
 package com.meolist.data.backup
 
+import com.meolist.data.db.entity.ActivitySubprojectEntity
+import com.meolist.data.db.entity.TimerStageEntity
 import androidx.room.withTransaction
 import com.meolist.data.db.MeoDatabase
 import com.meolist.data.db.dao.ActivityTypeDao
@@ -53,9 +55,13 @@ class BackupStore @Inject constructor(
     private val farmDao: FarmDao,
     private val clock: Clock,
 ) {
-    suspend fun snapshot(): BackupFile = BackupFile(
+    suspend fun snapshot(): BackupFile = db.withTransaction { snapshotInTransaction() }
+
+    private suspend fun snapshotInTransaction(): BackupFile = BackupFile(
         format = BackupFile.FORMAT,
         createdAt = clock.now(),
+        subprojects = typeDao.getSubprojects().map { SubprojectDto(it.id, it.typeId, it.name, it.color, it.sortOrder, it.archived) },
+        timerStages = recordDao.getStages().map { TimerStageDto(it.runningId, it.recordId, it.position, it.subprojectId, it.name, it.color, it.startAt, it.endAt) },
         folders = listDao.getFolders().map { FolderDto(it.id, it.name, it.sortOrder) },
         lists = listDao.getLists().map {
             ListDto(it.id, it.folderId, it.name, it.color, it.sortOrder, it.defaultActivityTypeId, it.archived)
@@ -226,6 +232,12 @@ class BackupStore @Inject constructor(
                     },
                 )
             }
+            file.subprojects.forEach {
+                typeDao.saveSubproject(ActivitySubprojectEntity(it.id, it.typeId, it.name, it.color, it.sortOrder, it.archived))
+            }
+            recordDao.insertStages(file.timerStages.map {
+                TimerStageEntity(runningId = it.runningId, recordId = it.recordId, position = it.position, subprojectId = it.subprojectId, name = it.name, color = it.color, startAt = it.startAt, endAt = it.endAt)
+            })
             file.habits.forEach {
                 habitDao.insertHabit(
                     HabitEntity(

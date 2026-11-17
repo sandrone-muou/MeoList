@@ -35,4 +35,14 @@
     <string name="core_calendar_next">Next period</string>
     <string name="core_calendar_month">Month</string>
     <string name="core_calendar_week">Week</string>
+    <string name="core_nav_tasks">Tasks</string>
+    <string name="core_nav_tracker">Timer</string>
+    <string name="core_nav_habits">Habits</string>
+    <string name="core_nav_farm">Farm</string>
+    <string name="core_nav_calendar">Calendar</string>
+    <string name="core_nav_quadrant">Quadrant</string>
+    <string name="core_nav_countdowns">Countdowns</string>
+    <string name="core_nav_stats">Stats</string>
+    <string name="core_nav_records">Records</string>
+    <string name="core_nav_more">More</string>
 </resources>

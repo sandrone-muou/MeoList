@@ -8,9 +8,10 @@ import androidx.navigation.navArgument
 import com.meolist.core.navigation.Routes
 import java.time.LocalDate
 
-fun NavGraphBuilder.trackerGraph(navController: NavController) {
+fun NavGraphBuilder.trackerGraph(navController: NavController, isTopLevel: (String) -> Boolean = { false }) {
     composable(Routes.TRACKER) {
         TrackerRoute(
+            onSession = { navController.navigate(Routes.stopwatch(it)) },
             onEditType = { navController.navigate(Routes.activityTypeEdit(it)) },
             onRecords = { navController.navigate(Routes.RECORDS) },
         )
@@ -23,10 +24,27 @@ fun NavGraphBuilder.trackerGraph(navController: NavController) {
     }
     composable(Routes.RECORDS) {
         RecordsRoute(
-            onBack = { navController.popBackStack() },
-            onEditRecord = { navController.navigate(Routes.recordEdit(recordId = it)) },
+            onBack = if (isTopLevel(Routes.RECORDS)) null else ({ navController.popBackStack(); Unit }),
+            onEditRecord = { navController.navigate(Routes.recordDetail(it)) },
             onAddRecord = { day: LocalDate -> navController.navigate(Routes.recordEdit(epochDay = day.toEpochDay())) },
             onStats = { navController.navigate(Routes.STATS) },
+        )
+    }
+    composable(
+        Routes.TIMER_SESSION,
+        arguments = listOf(
+            navArgument(Routes.ARG_ID) { type = NavType.LongType },
+            navArgument(Routes.ARG_FINISHED) { type = NavType.BoolType; defaultValue = false },
+        ),
+    ) {
+        TimerSessionRoute(
+            onBack = { navController.popBackStack() },
+            onEdit = { navController.navigate(Routes.recordEdit(recordId = it)) },
+            onStopped = { id ->
+                if (id == null) navController.popBackStack() else navController.navigate(Routes.recordDetail(id)) {
+                    popUpTo(Routes.TIMER_SESSION) { inclusive = true }
+                }
+            },
         )
     }
     composable(

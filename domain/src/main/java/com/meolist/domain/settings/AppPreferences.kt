@@ -28,6 +28,7 @@ data class AppSettings(
     val quadrantTags: Map<Quadrant, Long> = emptyMap(),
     val statsDefaultView: StatsDefaultView = StatsDefaultView.WEEK,
     val lastStatsPeriod: StatsPeriod = StatsPeriod.WEEK,
+    val bottomDestinations: List<BottomDestination> = BottomNavigation.defaults,
 )
 
 interface AppPreferences {

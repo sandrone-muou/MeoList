@@ -64,5 +64,14 @@
     <string name="settings_about_version">MeoList %1$s</string>
     <string name="settings_about_author">作者：sandrone-muou</string>
     <string name="settings_about_license">Apache License 2.0</string>
-    <string name="settings_app_version">0.4.0</string>
+    <string name="settings_app_version">0.5.0</string>
+    <string name="settings_bottom_navigation">底部导航</string>
+    <string name="settings_bottom_navigation_desc">选择并排序 3–5 个功能入口</string>
+    <string name="settings_bottom_navigation_hint">已选 %1$d / 5 项。任务、计时和更多必须保留，更多固定在最右侧。</string>
+    <string name="settings_bottom_required">必选入口</string>
+    <string name="settings_bottom_move_up">向前移动</string>
+    <string name="settings_bottom_move_down">向后移动</string>
+    <string name="settings_bottom_remove">移除</string>
+    <string name="settings_bottom_available">可添加的入口</string>
+    <string name="settings_bottom_reset">恢复默认</string>
 </resources>

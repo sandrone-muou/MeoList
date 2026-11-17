@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.meolist.domain.settings.AppPreferences
+import com.meolist.domain.settings.BottomNavigation
 import com.meolist.domain.settings.AppSettings
 import com.meolist.domain.settings.MonthChartStyle
 import com.meolist.domain.settings.StatsDefaultView
@@ -33,6 +34,7 @@ class DataStoreAppPreferences @Inject constructor(
     private val store = context.dataStore
 
     private object Keys {
+        val bottomDestinations = stringPreferencesKey("bottom_destinations")
         val multipleTimers = booleanPreferencesKey("multiple_timers")
         val ignoreShortRecordSec = intPreferencesKey("ignore_short_record_sec")
         val firstDayOfWeek = intPreferencesKey("first_day_of_week")
@@ -57,6 +59,7 @@ class DataStoreAppPreferences @Inject constructor(
     override suspend fun updateSettings(transform: (AppSettings) -> AppSettings) {
         store.edit { prefs ->
             val next = transform(prefs.toSettings())
+            prefs[Keys.bottomDestinations] = BottomNavigation.normalize(next.bottomDestinations.map { it.key }).joinToString(",") { it.key }
             prefs[Keys.multipleTimers] = next.multipleTimers
             prefs[Keys.ignoreShortRecordSec] = next.ignoreShortRecordSec
             prefs[Keys.firstDayOfWeek] = next.firstDayOfWeek.value
@@ -89,6 +92,7 @@ class DataStoreAppPreferences @Inject constructor(
     private fun Preferences.toSettings(): AppSettings {
         val defaults = AppSettings()
         return AppSettings(
+            bottomDestinations = this[Keys.bottomDestinations]?.let { BottomNavigation.normalize(it.split(",")) } ?: defaults.bottomDestinations,
             multipleTimers = this[Keys.multipleTimers] ?: defaults.multipleTimers,
             ignoreShortRecordSec = this[Keys.ignoreShortRecordSec] ?: defaults.ignoreShortRecordSec,
             firstDayOfWeek = this[Keys.firstDayOfWeek]?.let { runCatching { DayOfWeek.of(it) }.getOrNull() }

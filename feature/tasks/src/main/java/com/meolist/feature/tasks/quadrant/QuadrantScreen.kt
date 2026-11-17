@@ -218,7 +218,7 @@ private fun quadrantStyle(quadrant: Quadrant): QuadrantStyle = when (quadrant) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuadrantRoute(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onOpenTask: (Long) -> Unit,
     vm: QuadrantViewModel = hiltViewModel(),
 ) {

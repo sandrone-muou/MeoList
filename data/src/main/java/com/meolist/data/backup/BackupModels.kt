@@ -1,5 +1,6 @@
 package com.meolist.data.backup
 
+import com.meolist.domain.settings.BottomNavigation
 import com.meolist.domain.settings.AppSettings
 import com.meolist.domain.settings.MonthChartStyle
 import com.meolist.domain.settings.StatsDefaultView
@@ -39,12 +40,20 @@ data class BackupFile(
     val farmFields: List<FarmFieldDto> = emptyList(),
     val legacyFarm: LegacyFarmArchiveDto? = null,
     val settings: SettingsDto? = null,
+    val subprojects: List<SubprojectDto> = emptyList(),
+    val timerStages: List<TimerStageDto> = emptyList(),
 ) {
     companion object {
         const val LEGACY_FORMAT = 1
         const val FORMAT = 2
     }
 }
+
+@Serializable
+data class SubprojectDto(val id: Long, val typeId: Long, val name: String, val color: Int, val sortOrder: Long, val archived: Boolean)
+
+@Serializable
+data class TimerStageDto(val runningId: Long? = null, val recordId: Long? = null, val position: Int, val subprojectId: Long? = null, val name: String = "", val color: Int = 0xFF78909C.toInt(), val startAt: Long? = null, val endAt: Long? = null)
 
 @Serializable
 data class FolderDto(val id: Long, val name: String, val sortOrder: Long)
@@ -227,8 +236,10 @@ data class SettingsDto(
     val quadrantTags: Map<String, Long> = emptyMap(),
     val statsDefaultView: String = StatsDefaultView.WEEK.name,
     val lastStatsPeriod: String = StatsPeriod.WEEK.name,
+    val bottomDestinations: List<String> = BottomNavigation.defaults.map { it.key },
 ) {
     fun toSettings(): AppSettings = AppSettings(
+        bottomDestinations = BottomNavigation.normalize(bottomDestinations),
         multipleTimers = multipleTimers,
         ignoreShortRecordSec = ignoreShortRecordSec,
         firstDayOfWeek = runCatching { DayOfWeek.of(firstDayOfWeek) }.getOrDefault(DayOfWeek.MONDAY),
@@ -248,6 +259,7 @@ data class SettingsDto(
 
     companion object {
         fun from(settings: AppSettings) = SettingsDto(
+            bottomDestinations = settings.bottomDestinations.map { it.key },
             multipleTimers = settings.multipleTimers,
             ignoreShortRecordSec = settings.ignoreShortRecordSec,
             firstDayOfWeek = settings.firstDayOfWeek.value,

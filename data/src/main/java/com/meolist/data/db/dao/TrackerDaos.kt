@@ -6,6 +6,11 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import androidx.room.Upsert
+import com.meolist.data.db.entity.ActivitySubprojectEntity
+import com.meolist.data.db.entity.TimerStageEntity
+import com.meolist.data.db.entity.RunningWithStages
+import com.meolist.data.db.entity.RecordWithStages
 import com.meolist.data.db.entity.ActivityGoalEntity
 import com.meolist.data.db.entity.ActivityTypeEntity
 import com.meolist.data.db.entity.GoalReachedEntity
@@ -15,6 +20,17 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ActivityTypeDao {
+    @Query("SELECT * FROM activity_subproject WHERE typeId = :typeId ORDER BY sortOrder, id")
+    fun observeSubprojects(typeId: Long): Flow<List<ActivitySubprojectEntity>>
+
+    @Query("SELECT * FROM activity_subproject ORDER BY sortOrder, id")
+    suspend fun getSubprojects(): List<ActivitySubprojectEntity>
+
+    @Query("SELECT * FROM activity_subproject WHERE id = :id")
+    suspend fun getSubproject(id: Long): ActivitySubprojectEntity?
+
+    @Upsert
+    suspend fun saveSubproject(project: ActivitySubprojectEntity): Long
     @Query("SELECT * FROM activity_type ORDER BY sortOrder, id")
     fun observeTypes(): Flow<List<ActivityTypeEntity>>
 
@@ -70,6 +86,73 @@ interface ActivityTypeDao {
 
 @Dao
 interface TimeRecordDao {
+    @Transaction
+    @Query("SELECT * FROM running_timer ORDER BY startedAt")
+    fun observeRunningWithStages(): Flow<List<RunningWithStages>>
+
+    @Transaction
+    @Query("SELECT * FROM running_timer ORDER BY startedAt")
+    suspend fun getRunningWithStages(): List<RunningWithStages>
+
+    @Transaction
+    @Query("SELECT * FROM running_timer WHERE id = :id")
+    suspend fun getRunningWithStages(id: Long): RunningWithStages?
+
+    @Transaction
+    @Query("SELECT * FROM running_timer WHERE typeId = :typeId")
+    suspend fun getRunningByTypeWithStages(typeId: Long): RunningWithStages?
+
+    @Transaction
+    @Query("SELECT * FROM record WHERE startAt < :to AND endAt > :from ORDER BY startAt DESC")
+    fun observeRecordsWithStages(from: Long, to: Long): Flow<List<RecordWithStages>>
+
+    @Transaction
+    @Query("SELECT * FROM record ORDER BY startAt")
+    fun observeAllRecordsWithStages(): Flow<List<RecordWithStages>>
+
+    @Transaction
+    @Query("SELECT * FROM record ORDER BY startAt")
+    suspend fun getAllRecordsWithStages(): List<RecordWithStages>
+
+    @Transaction
+    @Query("SELECT * FROM record WHERE startAt < :to AND endAt > :from AND (:typeId IS NULL OR typeId = :typeId) ORDER BY startAt")
+    suspend fun getRecordsWithStages(from: Long, to: Long, typeId: Long?): List<RecordWithStages>
+
+    @Transaction
+    @Query("SELECT * FROM record WHERE id = :id")
+    suspend fun getRecordWithStages(id: Long): RecordWithStages?
+
+    @Transaction
+    @Query("SELECT * FROM record WHERE id = :id")
+    fun observeRecordWithStages(id: Long): Flow<RecordWithStages?>
+
+    @Query("SELECT * FROM timer_stage ORDER BY position")
+    suspend fun getStages(): List<TimerStageEntity>
+
+    @Insert
+    suspend fun insertStages(stages: List<TimerStageEntity>)
+
+    @Query("DELETE FROM timer_stage WHERE runningId = :id")
+    suspend fun deleteRunningStages(id: Long)
+
+    @Query("DELETE FROM timer_stage WHERE recordId = :id")
+    suspend fun deleteRecordStages(id: Long)
+
+    @Transaction
+    suspend fun saveRunningWithStages(timer: RunningTimerEntity, stages: List<TimerStageEntity>): Long {
+        val id = if (timer.id == 0L) insertRunning(timer) else timer.id.also { updateRunning(timer) }
+        deleteRunningStages(id)
+        insertStages(stages.map { it.copy(id = 0, runningId = id, recordId = null) })
+        return id
+    }
+
+    @Transaction
+    suspend fun saveRecordWithStages(record: RecordEntity, stages: List<TimerStageEntity>): Long {
+        val id = if (record.id == 0L) insertRecord(record) else record.id.also { updateRecord(record) }
+        deleteRecordStages(id)
+        insertStages(stages.map { it.copy(id = 0, recordId = id, runningId = null) })
+        return id
+    }
     @Query("SELECT * FROM running_timer ORDER BY startedAt")
     fun observeRunning(): Flow<List<RunningTimerEntity>>
 

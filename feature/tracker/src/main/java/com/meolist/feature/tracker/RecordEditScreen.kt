@@ -112,6 +112,7 @@ data class RecordEditState(
     val comment: String = "",
     val types: List<ActivityType> = emptyList(),
     val problem: RecordProblem? = null,
+    val hasStages: Boolean = false,
     /** Snapshot once the activity list is known; any difference means unsaved edits. */
     val original: RecordDraft? = null,
 ) {
@@ -180,6 +181,7 @@ class RecordEditViewModel @Inject constructor(
             loaded = true,
             isNew = false,
             typeId = record.typeId,
+            hasStages = record.stages.isNotEmpty(),
             startAt = record.startAt,
             endAt = record.endAt,
             taskId = record.taskId,
@@ -320,6 +322,9 @@ fun RecordEditRoute(
                     vertical = 8.dp,
                 ),
         ) {
+            if (state.hasStages && state.original?.typeId != state.typeId) {
+                Text(stringResource(R.string.tracker_session_type_changed), color = MaterialTheme.colorScheme.error)
+            }
             SectionLabel(stringResource(R.string.tracker_record_activity))
             if (state.types.none { !it.archived } && state.typeId == 0L) {
                 Text(

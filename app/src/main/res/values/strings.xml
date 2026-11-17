@@ -23,4 +23,6 @@
     <string name="more_achievements_desc">Badges earned on your farm</string>
     <string name="more_settings">Settings</string>
     <string name="more_settings_desc">Preferences, reminders, backup</string>
+    <string name="more_habits_desc">Build routines and check in each day</string>
+    <string name="more_farm_desc">Grow crops with your focused work</string>
 </resources>

@@ -1,6 +1,7 @@
 package com.meolist.domain.tracker
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /** Something time is tracked for, such as "Work" or "Reading". [icon] is a key resolved by the UI. */
 data class ActivityType(
@@ -34,6 +35,7 @@ data class RunningTimer(
     val taskId: Long? = null,
     val startedAt: Long,
     val comment: String = "",
+    val stages: List<TimerStage> = emptyList(),
 )
 
 /** A finished stretch of tracked time. */
@@ -45,6 +47,7 @@ data class TimeRecord(
     val endAt: Long,
     val comment: String = "",
     val isManual: Boolean = false,
+    val stages: List<TimerStage> = emptyList(),
 ) {
     val durationMs: Long get() = (endAt - startAt).coerceAtLeast(0)
 }
@@ -66,6 +69,10 @@ interface ActivityTypeRepository {
     /** Deletes the type together with its records, goals and running timer. */
     suspend fun deleteType(id: Long)
     suspend fun nextSortOrder(): Long
+
+    fun observeSubprojects(typeId: Long): Flow<List<ActivitySubproject>>
+    suspend fun getSubproject(id: Long): ActivitySubproject?
+    suspend fun saveSubproject(project: ActivitySubproject): Long
 
     fun observeGoals(): Flow<List<ActivityGoal>>
     suspend fun getGoals(): List<ActivityGoal>
@@ -103,6 +110,7 @@ interface TimeRecordRepository {
     fun observeRecords(from: Long, to: Long): Flow<List<TimeRecord>>
     /** Every record, for totals and the farm. */
     fun observeAllRecords(): Flow<List<TimeRecord>>
+    fun observeRecord(id: Long): Flow<TimeRecord?> = observeAllRecords().map { list -> list.find { it.id == id } }
     suspend fun getAllRecords(): List<TimeRecord>
     /** Records overlapping [from, to), optionally of one type only. */
     suspend fun getRecords(from: Long, to: Long, typeId: Long? = null): List<TimeRecord>

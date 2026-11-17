@@ -1,5 +1,8 @@
 package com.meolist.data.repo
 
+import com.meolist.data.db.entity.*
+import com.meolist.domain.tracker.ActivitySubproject
+import com.meolist.domain.tracker.TimerStage
 import androidx.room.withTransaction
 import com.meolist.data.db.MeoDatabase
 import com.meolist.data.db.dao.ActivityTypeDao
@@ -22,6 +25,12 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+internal fun ActivitySubprojectEntity.toDomain() = ActivitySubproject(id, typeId, name, color, sortOrder, archived)
+internal fun ActivitySubproject.toEntity() = ActivitySubprojectEntity(id, typeId, name, color, sortOrder, archived)
+internal fun TimerStageEntity.toDomain() = TimerStage(position, subprojectId, name, color, startAt, endAt)
+internal fun TimerStage.toEntity() = TimerStageEntity(position = position, subprojectId = subprojectId, name = name, color = color, startAt = startAt, endAt = endAt)
+internal fun RunningWithStages.toDomain() = timer.toDomain().copy(stages = stages.sortedBy { it.position }.map { it.toDomain() })
+internal fun RecordWithStages.toDomain() = record.toDomain().copy(stages = stages.sortedBy { it.position }.map { it.toDomain() })
 internal fun ActivityTypeEntity.toDomain() = ActivityType(id, name, icon, color, sortOrder, archived)
 internal fun ActivityType.toEntity() = ActivityTypeEntity(id, name, icon, color, sortOrder, archived)
 internal fun ActivityGoalEntity.toDomain() = ActivityGoal(typeId, GoalPeriod.fromValue(period), targetSec)
@@ -41,6 +50,9 @@ class ActivityTypeRepositoryImpl @Inject constructor(
     override suspend fun updateType(type: ActivityType) = dao.updateType(type.toEntity())
     override suspend fun deleteType(id: Long) = dao.deleteType(id)
     override suspend fun nextSortOrder(): Long = dao.nextSortOrder()
+    override fun observeSubprojects(typeId: Long): Flow<List<ActivitySubproject>> = dao.observeSubprojects(typeId).map { list -> list.map { it.toDomain() } }
+    override suspend fun getSubproject(id: Long): ActivitySubproject? = dao.getSubproject(id)?.toDomain()
+    override suspend fun saveSubproject(project: ActivitySubproject): Long = dao.saveSubproject(project.toEntity()).let { if (project.id == 0L) it else project.id }
 
     override fun observeGoals(): Flow<List<ActivityGoal>> = dao.observeGoals().map { it.map(ActivityGoalEntity::toDomain) }
     override suspend fun getGoals(): List<ActivityGoal> = dao.getGoals().map { it.toDomain() }
@@ -62,28 +74,29 @@ class ActivityTypeRepositoryImpl @Inject constructor(
 class TimeRecordRepositoryImpl @Inject constructor(
     private val dao: TimeRecordDao,
 ) : TimeRecordRepository {
-    override fun observeRunning(): Flow<List<RunningTimer>> = dao.observeRunning().map { it.map(RunningTimerEntity::toDomain) }
-    override suspend fun getRunning(): List<RunningTimer> = dao.getRunning().map { it.toDomain() }
-    override suspend fun getRunning(id: Long): RunningTimer? = dao.getRunning(id)?.toDomain()
-    override suspend fun getRunningByType(typeId: Long): RunningTimer? = dao.getRunningByType(typeId)?.toDomain()
-    override suspend fun insertRunning(timer: RunningTimer): Long = dao.insertRunning(timer.copy(id = 0).toEntity())
-    override suspend fun updateRunning(timer: RunningTimer) = dao.updateRunning(timer.toEntity())
+    override fun observeRunning(): Flow<List<RunningTimer>> = dao.observeRunningWithStages().map { list -> list.map { it.toDomain() } }
+    override suspend fun getRunning(): List<RunningTimer> = dao.getRunningWithStages().map { it.toDomain() }
+    override suspend fun getRunning(id: Long): RunningTimer? = dao.getRunningWithStages(id)?.toDomain()
+    override suspend fun getRunningByType(typeId: Long): RunningTimer? = dao.getRunningByTypeWithStages(typeId)?.toDomain()
+    override suspend fun insertRunning(timer: RunningTimer): Long = dao.saveRunningWithStages(timer.copy(id = 0).toEntity(), timer.stages.map { it.toEntity() })
+    override suspend fun updateRunning(timer: RunningTimer) { dao.saveRunningWithStages(timer.toEntity(), timer.stages.map { it.toEntity() }) }
     override suspend fun deleteRunning(id: Long) = dao.deleteRunning(id)
 
     override fun observeRecords(from: Long, to: Long): Flow<List<TimeRecord>> =
-        dao.observeRecords(from, to).map { it.map(RecordEntity::toDomain) }
+        dao.observeRecordsWithStages(from, to).map { list -> list.map { it.toDomain() } }
 
     override fun observeAllRecords(): Flow<List<TimeRecord>> =
-        dao.observeAllRecords().map { it.map(RecordEntity::toDomain) }
+        dao.observeAllRecordsWithStages().map { list -> list.map { it.toDomain() } }
 
-    override suspend fun getAllRecords(): List<TimeRecord> = dao.getAllRecords().map { it.toDomain() }
+    override suspend fun getAllRecords(): List<TimeRecord> = dao.getAllRecordsWithStages().map { it.toDomain() }
 
     override suspend fun getRecords(from: Long, to: Long, typeId: Long?): List<TimeRecord> =
-        (if (typeId == null) dao.getRecords(from, to) else dao.getRecordsOfType(from, to, typeId)).map { it.toDomain() }
+        dao.getRecordsWithStages(from, to, typeId).map { it.toDomain() }
 
-    override suspend fun getRecord(id: Long): TimeRecord? = dao.getRecord(id)?.toDomain()
-    override suspend fun insertRecord(record: TimeRecord): Long = dao.insertRecord(record.copy(id = 0).toEntity())
-    override suspend fun updateRecord(record: TimeRecord) = dao.updateRecord(record.toEntity())
+    override suspend fun getRecord(id: Long): TimeRecord? = dao.getRecordWithStages(id)?.toDomain()
+    override fun observeRecord(id: Long): Flow<TimeRecord?> = dao.observeRecordWithStages(id).map { it?.toDomain() }
+    override suspend fun insertRecord(record: TimeRecord): Long = dao.saveRecordWithStages(record.copy(id = 0).toEntity(), record.stages.map { it.toEntity() })
+    override suspend fun updateRecord(record: TimeRecord) { dao.saveRecordWithStages(record.toEntity(), record.stages.map { it.toEntity() }) }
     override suspend fun deleteRecord(id: Long) = dao.deleteRecord(id)
     override fun observeTaskTotalMs(taskId: Long): Flow<Long> = dao.observeTaskTotalMs(taskId)
     override suspend fun lastTypeForTask(taskId: Long): Long? = dao.lastTypeForTask(taskId)

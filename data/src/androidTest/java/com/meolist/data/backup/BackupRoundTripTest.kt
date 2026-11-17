@@ -1,5 +1,7 @@
 package com.meolist.data.backup
 
+import com.meolist.data.db.entity.ActivitySubprojectEntity
+import com.meolist.data.db.entity.TimerStageEntity
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -99,6 +101,12 @@ class BackupRoundTripTest {
         repeat(3) { db.farmDao().saveField(FarmSlotEntity(slot = it, sourceCutoff = 0)) }
         db.farmDao().insertHarvest(HarvestEntity(12, "carrot", 11, 300, 180))
         db.farmDao().insertAchievement(AchievementEntity("focus_1h", 400))
+        db.activityTypeDao().saveSubproject(ActivitySubprojectEntity(20, 1, "Reading", 2, 0, false))
+        db.timeRecordDao().insertStages(listOf(
+            TimerStageEntity(runningId = 7, position = 1, subprojectId = 20, name = "Original", color = 2, startAt = 30, endAt = null),
+            TimerStageEntity(runningId = 7, position = 2, subprojectId = null, name = "", color = 3, startAt = null, endAt = null),
+            TimerStageEntity(recordId = 8, position = 1, subprojectId = 20, name = "Original", color = 2, startAt = recordStart, endAt = recordStart + 30 * 60_000),
+        ))
     }
 
     @Test
@@ -132,6 +140,10 @@ class BackupRoundTripTest {
         assertEquals(1, db.farmDao().getHarvests().size)
         assertEquals(400L, db.farmDao().getAchievements().single().unlockedAt)
 
+        assertEquals(1, db.activityTypeDao().getSubprojects().size)
+        assertEquals(3, db.timeRecordDao().getStages().size)
+        assertEquals("Original", db.timeRecordDao().getRecordWithStages(8)!!.stages.single().name)
+        assertEquals(2, db.timeRecordDao().getRunningWithStages(7)!!.stages.size)
         val csv = store.recordsCsv()
         assertTrue(csv.contains("2026-10-24"))
         assertTrue(csv.contains(",30,Work,Plan,"))

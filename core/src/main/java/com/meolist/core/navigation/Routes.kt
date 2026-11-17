@@ -25,6 +25,10 @@ object Routes {
     fun taskCreate(epochDay: Long) = "tasks/new?day=$epochDay"
 
     // Tracker
+    const val ARG_FINISHED = "finished"
+    const val TIMER_SESSION = "tracker/session/{$ARG_ID}?$ARG_FINISHED={$ARG_FINISHED}"
+    fun stopwatch(typeId: Long) = "tracker/session/$typeId?$ARG_FINISHED=false"
+    fun recordDetail(recordId: Long) = "tracker/session/$recordId?$ARG_FINISHED=true"
     const val ACTIVITY_TYPE_EDIT = "tracker/type/{$ARG_ID}"
     fun activityTypeEdit(typeId: Long = 0) = "tracker/type/$typeId"
     const val RECORDS = "tracker/records"
@@ -54,5 +58,6 @@ object Routes {
     const val STATS = "stats"
     const val CALENDAR = "calendar"
     const val SETTINGS = "settings"
+    const val BOTTOM_NAV_SETTINGS = "settings/bottom-navigation"
     const val ACHIEVEMENTS = "farm/achievements"
 }

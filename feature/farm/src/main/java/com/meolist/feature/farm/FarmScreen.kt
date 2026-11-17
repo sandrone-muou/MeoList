@@ -185,6 +185,7 @@ class FarmViewModel @Inject constructor(
 @Composable
 fun FarmRoute(
     onOpenAchievements: () -> Unit,
+    onBack: (() -> Unit)? = null,
     vm: FarmViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -224,6 +225,7 @@ fun FarmRoute(
     }
 
     MeoScaffold(
+        onBack = onBack,
         title = stringResource(R.string.farm_title),
         large = true,
         actions = {

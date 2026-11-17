@@ -149,7 +149,7 @@ class CountdownsViewModel @Inject constructor(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CountdownsRoute(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onOpen: (Long) -> Unit,
     onAdd: () -> Unit,
     vm: CountdownsViewModel = hiltViewModel(),

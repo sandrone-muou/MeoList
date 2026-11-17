@@ -34,7 +34,7 @@ class TimerInteractor @Inject constructor(
      * the same task keeps running; one tracking something else is stopped and recorded first. With
      * parallel timers turned off every other timer is stopped too. Returns the running timer's id.
      */
-    suspend fun start(typeId: Long, taskId: Long? = null): Long = mutex.withLock {
+    suspend fun start(typeId: Long, taskId: Long? = null, stagePlan: List<Long?> = emptyList()): Long = mutex.withLock {
         val settings = prefs.settings.first()
         val now = clock.now()
         val id = tx.run {
@@ -44,7 +44,11 @@ class TimerInteractor @Inject constructor(
             } else {
                 val toStop = if (settings.multipleTimers) listOfNotNull(existing) else records.getRunning()
                 toStop.forEach { finish(it, now, settings.ignoreShortRecordSec) }
-                records.insertRunning(RunningTimer(typeId = typeId, taskId = taskId, startedAt = now))
+                val stages = stagePlan.mapIndexed { index, projectId ->
+                    TimerStage(index + 1, startAt = now.takeIf { index == 0 })
+                        .assignedTo(projectFor(typeId, projectId))
+                }
+                records.insertRunning(RunningTimer(typeId = typeId, taskId = taskId, startedAt = now, stages = stages))
             }
         }
         sync.sync()
@@ -74,8 +78,86 @@ class TimerInteractor @Inject constructor(
     /** Adjusts a running timer; the start can not move into the future. */
     suspend fun updateRunning(runningId: Long, startedAt: Long, comment: String, taskId: Long?) = mutex.withLock {
         val timer = records.getRunning(runningId) ?: return@withLock
-        records.updateRunning(timer.copy(startedAt = minOf(startedAt, clock.now()), comment = comment.trim(), taskId = taskId))
+        val start = minOf(startedAt, clock.now())
+        val stages = if (timer.stages.isEmpty()) emptyList() else {
+            val current = TimerStages.current(timer)
+            val oldClosed = timer.stages.filter { it.endAt != null }
+            val boundary = if (oldClosed.isEmpty()) start else maxOf(start, requireNotNull(current.startAt))
+            val closed = TimerStages.resized(oldClosed, start, boundary)
+            (closed + current.copy(startAt = boundary) + timer.stages.filter { it.startAt == null })
+                .mapIndexed { index, stage -> stage.copy(position = index + 1) }
+        }
+        tx.run { records.updateRunning(timer.copy(startedAt = start, comment = comment.trim(), taskId = taskId, stages = stages)) }
         sync.sync()
+    }
+
+    /** Saves a boundary without resetting the overall stopwatch. */
+    suspend fun mark(runningId: Long): Boolean = mutex.withLock {
+        val timer = records.getRunning(runningId) ?: return@withLock false
+        val current = TimerStages.current(timer)
+        val now = clock.now()
+        if (now <= requireNotNull(current.startAt)) return@withLock false
+        val next = timer.stages.find { it.position == current.position + 1 }
+            ?: TimerStage(current.position + 1)
+        val stages = timer.stages.filter { it.position != current.position && it.position != next.position } +
+            current.copy(endAt = now) + next.copy(startAt = now)
+        tx.run { records.updateRunning(timer.copy(stages = stages.sortedBy { it.position })) }
+        sync.sync()
+        true
+    }
+
+    suspend fun assignRunningStage(runningId: Long, position: Int, projectId: Long?) = mutex.withLock {
+        require(position > 0)
+        val timer = records.getRunning(runningId) ?: return@withLock
+        val project = projectFor(timer.typeId, projectId)
+        val current = TimerStages.current(timer)
+        val stages = (1..maxOf(position, timer.stages.maxOfOrNull { it.position } ?: 1)).map { index ->
+            val stage = timer.stages.find { it.position == index }
+                ?: if (index == 1) current else TimerStage(index)
+            if (index == position) stage.assignedTo(project) else stage
+        }
+        tx.run { records.updateRunning(timer.copy(stages = stages)) }
+        sync.sync()
+    }
+
+    suspend fun assignRecordStage(recordId: Long, position: Int, projectId: Long?) = mutex.withLock {
+        val record = records.getRecord(recordId) ?: return@withLock
+        val project = projectFor(record.typeId, projectId)
+        tx.run { records.updateRecord(record.copy(stages = record.stages.map {
+            if (it.position == position) it.assignedTo(project) else it
+        })) }
+        sync.sync()
+    }
+
+    suspend fun removePlannedStage(runningId: Long, position: Int) = mutex.withLock {
+        val timer = records.getRunning(runningId) ?: return@withLock
+        if (timer.stages.find { it.position == position }?.startAt != null) return@withLock
+        val stages = timer.stages.filter { it.position != position }.mapIndexed { index, stage -> stage.copy(position = index + 1) }
+        tx.run { records.updateRunning(timer.copy(stages = stages)) }
+        sync.sync()
+    }
+
+    suspend fun saveSubproject(project: ActivitySubproject): Long = mutex.withLock {
+        require(project.name.isNotBlank())
+        require(types.getType(project.typeId) != null)
+        if (project.id != 0L) require(types.getSubproject(project.id)?.typeId == project.typeId)
+        types.saveSubproject(project.copy(name = project.name.trim(), sortOrder = if (project.id == 0L) clock.now() else project.sortOrder))
+    }
+
+    suspend fun moveSubproject(projectId: Long, delta: Int) = mutex.withLock {
+        require(delta == -1 || delta == 1)
+        val project = types.getSubproject(projectId) ?: return@withLock
+        val list = types.observeSubprojects(project.typeId).first().toMutableList()
+        val from = list.indexOfFirst { it.id == projectId }
+        val to = from + delta
+        if (from < 0 || to !in list.indices) return@withLock
+        list[from] = list[to].also { list[to] = project }
+        tx.run { list.forEachIndexed { index, item -> types.saveSubproject(item.copy(sortOrder = index.toLong())) } }
+    }
+
+    private suspend fun projectFor(typeId: Long, projectId: Long?): ActivitySubproject? {
+        if (projectId == null) return null
+        return requireNotNull(types.getSubproject(projectId)).also { require(it.typeId == typeId && !it.archived) }
     }
 
     /**
@@ -83,19 +165,22 @@ class TimerInteractor @Inject constructor(
      * marked manual; an edited one keeps how it was created. Nothing is written when the record is
      * invalid.
      */
-    suspend fun saveRecord(record: TimeRecord): RecordSaveResult {
+    suspend fun saveRecord(record: TimeRecord): RecordSaveResult = mutex.withLock {
         val type = types.getType(record.typeId)
-        RecordRules.validate(record, typeExists = type != null, now = clock.now())?.let { return RecordSaveResult.Invalid(it) }
+        RecordRules.validate(record, typeExists = type != null, now = clock.now())?.let { return@withLock RecordSaveResult.Invalid(it) }
         val clean = record.copy(comment = record.comment.trim(), taskId = record.taskId?.takeIf { tasks.get(it) != null })
         val existing = if (clean.id != 0L) records.getRecord(clean.id) else null
         val id = if (existing == null) {
             records.insertRecord(clean.copy(id = 0, isManual = true))
         } else {
-            records.updateRecord(clean.copy(isManual = existing.isManual))
+            val stages = TimerStages.resized(existing.stages, clean.startAt, clean.endAt).map {
+                if (existing.typeId != clean.typeId) it.assignedTo(null) else it
+            }
+            tx.run { records.updateRecord(clean.copy(isManual = existing.isManual, stages = stages)) }
             existing.id
         }
         sync.sync()
-        return RecordSaveResult.Saved(id)
+        RecordSaveResult.Saved(id)
     }
 
     /** Deletes a record and returns it, so the deletion can be undone with [restoreRecord]. */
@@ -176,10 +261,11 @@ class TimerInteractor @Inject constructor(
     private suspend fun finish(timer: RunningTimer, endAt: Long, ignoreShortSec: Int): Long? {
         records.deleteRunning(timer.id)
         // A clock moved backwards would give a negative duration, which counts as zero.
-        val end = maxOf(endAt, timer.startedAt)
+        val end = maxOf(endAt, timer.startedAt, timer.stages.mapNotNull { it.endAt }.maxOrNull() ?: timer.startedAt)
         if (end - timer.startedAt < maxOf(ignoreShortSec * 1000L, 1L)) return null
         return records.insertRecord(
-            TimeRecord(typeId = timer.typeId, taskId = timer.taskId, startAt = timer.startedAt, endAt = end, comment = timer.comment),
+            TimeRecord(typeId = timer.typeId, taskId = timer.taskId, startAt = timer.startedAt, endAt = end, comment = timer.comment,
+                stages = TimerStages.finish(timer, end)),
         )
     }
 }

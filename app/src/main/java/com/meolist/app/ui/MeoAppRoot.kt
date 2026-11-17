@@ -1,6 +1,5 @@
 package com.meolist.app.ui
 
-import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -8,17 +7,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Grass
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Grass
-import androidx.compose.material.icons.outlined.MoreHoriz
-import androidx.compose.material.icons.outlined.Repeat
-import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -28,19 +16,23 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.rememberUpdatedState
+import com.meolist.domain.settings.BottomDestination
+import com.meolist.core.navigation.bottomDestinationIcon
+import com.meolist.core.navigation.bottomDestinationLabel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.testTag
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.meolist.app.R
 import com.meolist.core.navigation.Routes
 import com.meolist.feature.calendar.calendarGraph
 import com.meolist.feature.countdown.countdownGraph
@@ -53,23 +45,11 @@ import com.meolist.feature.tasks.tasksGraph
 import com.meolist.feature.tracker.trackerGraph
 import com.meolist.notification.DeepLink
 
-private enum class TopLevel(
-    val route: String,
-    @StringRes val label: Int,
-    val icon: ImageVector,
-    val selectedIcon: ImageVector,
-) {
-    Tasks(Routes.TASKS, R.string.nav_tasks, Icons.Outlined.CheckCircle, Icons.Filled.CheckCircle),
-    Tracker(Routes.TRACKER, R.string.nav_tracker, Icons.Outlined.Timer, Icons.Filled.Timer),
-    Habits(Routes.HABITS, R.string.nav_habits, Icons.Outlined.Repeat, Icons.Filled.Repeat),
-    Farm(Routes.FARM, R.string.nav_farm, Icons.Outlined.Grass, Icons.Filled.Grass),
-    More(Routes.MORE, R.string.nav_more, Icons.Outlined.MoreHoriz, Icons.Filled.MoreHoriz),
-}
-
-private val topLevelRoutes = TopLevel.entries.map { it.route }.toSet()
-
 @Composable
-fun MeoAppRoot(deepLink: DeepLink? = null, onDeepLinkHandled: () -> Unit = {}) {
+fun MeoAppRoot(deepLink: DeepLink? = null, onDeepLinkHandled: () -> Unit = {}, vm: AppNavigationViewModel = hiltViewModel()) {
+    val settings by vm.settings.collectAsStateWithLifecycle()
+    val items = settings?.bottomDestinations.orEmpty()
+    val topLevelRoutes by rememberUpdatedState(items.map { it.key }.toSet())
     val navController = rememberNavController()
     LaunchedEffect(deepLink) {
         when (deepLink) {
@@ -85,7 +65,7 @@ fun MeoAppRoot(deepLink: DeepLink? = null, onDeepLinkHandled: () -> Unit = {}) {
     }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
-    val showBottomBar = TopLevel.entries.any { it.route == destination?.route }
+    val showBottomBar = destination?.route in topLevelRoutes
     val farmReady = rememberFarmReadyCount()
 
     Scaffold(
@@ -93,12 +73,13 @@ fun MeoAppRoot(deepLink: DeepLink? = null, onDeepLinkHandled: () -> Unit = {}) {
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
-                    TopLevel.entries.forEach { item ->
-                        val selected = destination?.hierarchy?.any { it.route == item.route } == true
+                    items.forEach { item ->
+                        val selected = destination?.hierarchy?.any { it.route == item.key } == true
                         NavigationBarItem(
+                            modifier = Modifier.testTag("bottom-${item.key}"),
                             selected = selected,
                             onClick = {
-                                navController.navigate(item.route) {
+                                navController.navigate(item.key) {
                                     popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                     launchSingleTop = true
                                     restoreState = true
@@ -107,18 +88,18 @@ fun MeoAppRoot(deepLink: DeepLink? = null, onDeepLinkHandled: () -> Unit = {}) {
                             icon = {
                                 BadgedBox(
                                     badge = {
-                                        if (item == TopLevel.Farm && farmReady > 0) {
+                                        if (item == BottomDestination.FARM && farmReady > 0) {
                                             Badge { Text(farmReady.toString()) }
                                         }
                                     },
                                 ) {
                                     Icon(
-                                        if (selected) item.selectedIcon else item.icon,
+                                        bottomDestinationIcon(item, selected),
                                         contentDescription = null,
                                     )
                                 }
                             },
-                            label = { Text(stringResource(item.label)) },
+                            label = { Text(bottomDestinationLabel(item)) },
                             colors = NavigationBarItemDefaults.colors(
                                 indicatorColor = MaterialTheme.colorScheme.primaryContainer,
                             ),
@@ -163,16 +144,24 @@ fun MeoAppRoot(deepLink: DeepLink? = null, onDeepLinkHandled: () -> Unit = {}) {
                     }
                 },
             ) {
-                tasksGraph(navController)
-                trackerGraph(navController)
-                habitsGraph(navController)
-                farmGraph(navController)
-                countdownGraph(navController)
-                statsGraph(navController)
-                calendarGraph(navController)
+                tasksGraph(navController, isTopLevel = { it in topLevelRoutes })
+                trackerGraph(navController, isTopLevel = { it in topLevelRoutes })
+                habitsGraph(navController, isTopLevel = { it in topLevelRoutes })
+                farmGraph(navController, isTopLevel = { it in topLevelRoutes })
+                countdownGraph(navController, isTopLevel = { it in topLevelRoutes })
+                statsGraph(navController, isTopLevel = { it in topLevelRoutes })
+                calendarGraph(navController, isTopLevel = { it in topLevelRoutes })
                 settingsGraph(navController)
                 composable(Routes.MORE) {
-                    MoreScreen(onNavigate = { navController.navigate(it) })
+                    MoreScreen(farmReady = farmReady, onNavigate = { route ->
+                        navController.navigate(route) {
+                            if (route in topLevelRoutes) {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    })
                 }
             }
         }

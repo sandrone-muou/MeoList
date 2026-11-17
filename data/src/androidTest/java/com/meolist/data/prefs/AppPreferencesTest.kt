@@ -23,4 +23,20 @@ class AppPreferencesTest {
         assertTrue(reloaded.farmInfoDismissed.first())
         assertEquals(10 * 60 + 15, reloaded.settings.first().defaultReminderMinute)
     }
+    @Test
+    fun navigationPersistsAndRepairsInvalidLists() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val preferences = DataStoreAppPreferences(context)
+        preferences.updateSettings { it.copy(bottomDestinations = listOf(
+            com.meolist.domain.settings.BottomDestination.STATS,
+            com.meolist.domain.settings.BottomDestination.STATS,
+        )) }
+        val reloaded = DataStoreAppPreferences(context).settings.first().bottomDestinations
+        assertEquals(listOf(
+            com.meolist.domain.settings.BottomDestination.TASKS,
+            com.meolist.domain.settings.BottomDestination.TRACKER,
+            com.meolist.domain.settings.BottomDestination.STATS,
+            com.meolist.domain.settings.BottomDestination.MORE,
+        ), reloaded)
+    }
 }

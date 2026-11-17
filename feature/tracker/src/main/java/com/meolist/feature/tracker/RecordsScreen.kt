@@ -175,7 +175,7 @@ class RecordsViewModel @Inject constructor(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecordsRoute(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onEditRecord: (Long) -> Unit,
     onAddRecord: (LocalDate) -> Unit,
     onStats: () -> Unit,

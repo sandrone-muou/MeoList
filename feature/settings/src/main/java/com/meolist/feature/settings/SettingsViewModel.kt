@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.meolist.domain.backup.BackupFormatException
 import com.meolist.domain.backup.BackupService
 import com.meolist.domain.backup.BackupSummary
+import com.meolist.domain.settings.BottomDestination
+import com.meolist.domain.settings.BottomNavigation
 import com.meolist.domain.settings.AppPreferences
 import com.meolist.domain.settings.AppSettings
 import com.meolist.domain.settings.MonthChartStyle
@@ -52,6 +54,17 @@ class SettingsViewModel @Inject constructor(
     val state: StateFlow<SettingsUiState> = combine(prefs.settings, local) { settings, ui ->
         ui.copy(settings = settings)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
+
+    fun setBottomDestinations(items: List<BottomDestination>) = update {
+        it.copy(bottomDestinations = BottomNavigation.normalize(items.map { d -> d.key }))
+    }
+    fun addBottomDestination(item: BottomDestination) = update {
+        if (it.bottomDestinations.size >= BottomNavigation.MAX_ITEMS || item in it.bottomDestinations) it
+        else it.copy(bottomDestinations = BottomNavigation.normalize((it.bottomDestinations.dropLast(1) + item).map { d -> d.key }))
+    }
+    fun removeBottomDestination(item: BottomDestination) = update {
+        if (item.required) it else it.copy(bottomDestinations = it.bottomDestinations - item)
+    }
 
     fun setMultipleTimers(value: Boolean) = update { it.copy(multipleTimers = value) }
 

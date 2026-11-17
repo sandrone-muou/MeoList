@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.BarChart
@@ -64,6 +65,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -94,6 +96,7 @@ import java.time.format.TextStyle
 @Composable
 fun SettingsRoute(
     onBack: () -> Unit,
+    onBottomNavigation: () -> Unit = {},
     vm: SettingsViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -165,7 +168,7 @@ fun SettingsRoute(
                 bottom = 24.dp,
             ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(padding).fillMaxSize(),
+            modifier = Modifier.padding(padding).fillMaxSize().testTag("settings-list"),
         ) {
             if (state.busy) {
                 item {
@@ -204,6 +207,17 @@ fun SettingsRoute(
                 }
             }
 
+            item {
+                SettingsCard {
+                    ChoiceRow(
+                        icon = Icons.Outlined.Settings,
+                        title = stringResource(R.string.settings_bottom_navigation),
+                        subtitle = stringResource(R.string.settings_bottom_navigation_desc),
+                        value = state.settings.bottomDestinations.size.toString(),
+                        onClick = onBottomNavigation,
+                    )
+                }
+            }
             item { SectionLabel(stringResource(R.string.settings_section_timing)) }
             item {
                 SettingsCard {

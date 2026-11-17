@@ -67,5 +67,14 @@
     <string name="settings_about_version">MeoList %1$s</string>
     <string name="settings_about_author">Made by sandrone-muou</string>
     <string name="settings_about_license">Apache License 2.0</string>
-    <string name="settings_app_version">0.4.0</string>
+    <string name="settings_app_version">0.5.0</string>
+    <string name="settings_bottom_navigation">Bottom navigation</string>
+    <string name="settings_bottom_navigation_desc">Choose and reorder 3–5 shortcuts</string>
+    <string name="settings_bottom_navigation_hint">%1$d / 5 shortcuts. Tasks, Timer and More are required. More stays on the right.</string>
+    <string name="settings_bottom_required">Required shortcut</string>
+    <string name="settings_bottom_move_up">Move earlier</string>
+    <string name="settings_bottom_move_down">Move later</string>
+    <string name="settings_bottom_remove">Remove</string>
+    <string name="settings_bottom_available">Available shortcuts</string>
+    <string name="settings_bottom_reset">Restore defaults</string>
 </resources>

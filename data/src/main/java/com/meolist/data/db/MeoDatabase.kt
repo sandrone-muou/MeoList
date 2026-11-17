@@ -2,6 +2,8 @@ package com.meolist.data.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import com.meolist.data.db.entity.ActivitySubprojectEntity
+import com.meolist.data.db.entity.TimerStageEntity
 import com.meolist.data.db.dao.ActivityTypeDao
 import com.meolist.data.db.dao.CountdownDao
 import com.meolist.data.db.dao.FarmDao
@@ -56,8 +58,10 @@ import com.meolist.data.db.entity.LegacyFarmArchiveEntity
         FarmStateEntity::class,
         FarmSlotEntity::class,
         LegacyFarmArchiveEntity::class,
+        ActivitySubprojectEntity::class,
+        TimerStageEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class MeoDatabase : RoomDatabase() {

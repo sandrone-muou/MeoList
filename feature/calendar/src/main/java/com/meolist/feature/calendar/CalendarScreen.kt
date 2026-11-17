@@ -240,7 +240,7 @@ class CalendarViewModel @Inject constructor(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarRoute(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onOpenTask: (Long) -> Unit,
     onOpenHabit: (Long) -> Unit,
     onOpenCountdown: (Long) -> Unit,

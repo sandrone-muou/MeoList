@@ -5,10 +5,10 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.meolist.core.navigation.Routes
 
-fun NavGraphBuilder.calendarGraph(navController: NavController) {
+fun NavGraphBuilder.calendarGraph(navController: NavController, isTopLevel: (String) -> Boolean = { false }) {
     composable(Routes.CALENDAR) {
         CalendarRoute(
-            onBack = { navController.popBackStack() },
+            onBack = if (isTopLevel(Routes.CALENDAR)) null else ({ navController.popBackStack(); Unit }),
             onOpenTask = { navController.navigate(Routes.taskDetail(it)) },
             onOpenHabit = { navController.navigate(Routes.habitDetail(it)) },
             onOpenCountdown = { navController.navigate(Routes.countdownEdit(it)) },

@@ -21,12 +21,16 @@ import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.HourglassBottom
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.ViewTimeline
+import androidx.compose.material3.Badge
+import androidx.compose.material.icons.outlined.Grass
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.meolist.app.R
@@ -46,6 +50,8 @@ private data class MoreEntry(
 )
 
 private val tools = listOf(
+    MoreEntry(Routes.HABITS, R.string.nav_habits, R.string.more_habits_desc, Icons.Outlined.Repeat),
+    MoreEntry(Routes.FARM, R.string.nav_farm, R.string.more_farm_desc, Icons.Outlined.Grass),
     MoreEntry(Routes.CALENDAR, R.string.more_calendar, R.string.more_calendar_desc, Icons.Outlined.CalendarMonth),
     MoreEntry(Routes.QUADRANT, R.string.more_quadrant, R.string.more_quadrant_desc, Icons.Outlined.GridView),
     MoreEntry(Routes.COUNTDOWNS, R.string.more_countdown, R.string.more_countdown_desc, Icons.Outlined.HourglassBottom),
@@ -55,7 +61,7 @@ private val tools = listOf(
 )
 
 @Composable
-fun MoreScreen(onNavigate: (String) -> Unit) {
+fun MoreScreen(onNavigate: (String) -> Unit, farmReady: Int = 0) {
     MeoScaffold(title = stringResource(R.string.more_title), large = true) { padding ->
         LazyColumn(
             contentPadding = PaddingValues(
@@ -64,14 +70,14 @@ fun MoreScreen(onNavigate: (String) -> Unit) {
                 top = padding.calculateTopPadding(),
                 bottom = Meo.spacing.bottomContent,
             ),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().testTag("more-list"),
         ) {
             item { SectionHeader(stringResource(R.string.more_group_tools)) }
             item {
                 MeoListGroup {
                     tools.forEachIndexed { index, entry ->
                         if (index > 0) MeoListDivider()
-                        MoreRow(entry) { onNavigate(entry.route) }
+                        MoreRow(entry, readyCount = if (entry.route == Routes.FARM) farmReady else 0, modifier = Modifier.testTag("more-route-${entry.route}")) { onNavigate(entry.route) }
                     }
                 }
             }
@@ -86,7 +92,7 @@ fun MoreScreen(onNavigate: (String) -> Unit) {
                     MoreRow(MoreEntry(
                         Routes.SETTINGS, R.string.more_settings,
                         R.string.more_settings_desc, Icons.Outlined.Settings,
-                    )) { onNavigate(Routes.SETTINGS) }
+                    ), modifier = Modifier.testTag("more-route-${Routes.SETTINGS}")) { onNavigate(Routes.SETTINGS) }
                 }
             }
         }
@@ -94,9 +100,9 @@ fun MoreScreen(onNavigate: (String) -> Unit) {
 }
 
 @Composable
-private fun MoreRow(entry: MoreEntry, onClick: () -> Unit) {
+private fun MoreRow(entry: MoreEntry, readyCount: Int = 0, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(Meo.spacing.lg),
+        modifier.fillMaxWidth().clickable(onClick = onClick).padding(Meo.spacing.lg),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconBadge(entry.icon, MaterialTheme.colorScheme.primary)
@@ -109,6 +115,7 @@ private fun MoreRow(entry: MoreEntry, onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        if (readyCount > 0) Badge { Text(readyCount.toString()) }
         Spacer(Modifier.width(Meo.spacing.sm))
         Icon(
             Icons.AutoMirrored.Outlined.KeyboardArrowRight, null,

@@ -35,4 +35,14 @@
     <string name="core_calendar_next">下一期</string>
     <string name="core_calendar_month">月</string>
     <string name="core_calendar_week">周</string>
+    <string name="core_nav_tasks">任务</string>
+    <string name="core_nav_tracker">计时</string>
+    <string name="core_nav_habits">习惯</string>
+    <string name="core_nav_farm">农场</string>
+    <string name="core_nav_calendar">日历</string>
+    <string name="core_nav_quadrant">四象限</string>
+    <string name="core_nav_countdowns">倒数日</string>
+    <string name="core_nav_stats">统计</string>
+    <string name="core_nav_records">记录</string>
+    <string name="core_nav_more">更多</string>
 </resources>

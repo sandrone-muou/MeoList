@@ -7,9 +7,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.meolist.core.navigation.Routes
 
-fun NavGraphBuilder.habitsGraph(navController: NavController) {
+fun NavGraphBuilder.habitsGraph(navController: NavController, isTopLevel: (String) -> Boolean = { false }) {
     composable(Routes.HABITS) {
-        HabitsRoute(
+        HabitsRoute(onBack = if (isTopLevel(Routes.HABITS)) null else ({ navController.popBackStack(); Unit }),
             onOpen = { navController.navigate(Routes.habitDetail(it)) },
             onAdd = { navController.navigate(Routes.habitEdit()) },
         )

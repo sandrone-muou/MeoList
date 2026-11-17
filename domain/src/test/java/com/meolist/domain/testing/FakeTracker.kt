@@ -6,6 +6,7 @@ import com.meolist.domain.settings.AppSettings
 import com.meolist.domain.task.ListFolder
 import com.meolist.domain.task.TaskList
 import com.meolist.domain.task.TaskListRepository
+import com.meolist.domain.tracker.ActivitySubproject
 import com.meolist.domain.tracker.ActivityGoal
 import com.meolist.domain.tracker.ActivityType
 import com.meolist.domain.tracker.ActivityTypeRepository
@@ -66,6 +67,7 @@ class FakeTaskListRepository : TaskListRepository {
 
 /** In-memory activity types and time records sharing one store, like the Room database. */
 class FakeTracker : ActivityTypeRepository, TimeRecordRepository {
+    private val subprojects = MutableStateFlow<Map<Long, ActivitySubproject>>(emptyMap())
     val types = MutableStateFlow<Map<Long, ActivityType>>(emptyMap())
     val goals = MutableStateFlow<List<ActivityGoal>>(emptyList())
     private val reached = MutableStateFlow<Set<Triple<Long, GoalPeriod, Long>>>(emptySet())
@@ -114,6 +116,14 @@ class FakeTracker : ActivityTypeRepository, TimeRecordRepository {
 
     override fun observeReachedGoals(): Flow<List<ReachedGoal>> = reached.map { set ->
         set.map { ReachedGoal(it.first, it.second, it.third, 0) }
+    }
+
+    override fun observeSubprojects(typeId: Long): Flow<List<ActivitySubproject>> = subprojects.map { it.values.filter { p -> p.typeId == typeId }.sortedBy { p -> p.sortOrder } }
+    override suspend fun getSubproject(id: Long): ActivitySubproject? = subprojects.value[id]
+    override suspend fun saveSubproject(project: ActivitySubproject): Long {
+        val id = if (project.id == 0L) nextId++ else project.id
+        subprojects.value = subprojects.value + (id to project.copy(id = id))
+        return id
     }
 
     // Running timers

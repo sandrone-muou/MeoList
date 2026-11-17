@@ -8,6 +8,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
@@ -63,6 +64,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
@@ -104,6 +106,7 @@ import java.time.ZoneId
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackerRoute(
+    onSession: (Long) -> Unit,
     onEditType: (Long) -> Unit,
     onRecords: () -> Unit,
     vm: TrackerViewModel = hiltViewModel(),
@@ -191,7 +194,7 @@ fun TrackerRoute(
                             windows = state.windows,
                             now = now,
                             compactRow = columns == 1,
-                            modifier = Modifier.animateItem(),
+                            modifier = Modifier.animateItem().testTag("tracker-type-${card.type.id}").clickable { onSession(card.type.id) },
                             onToggle = {
                                 if (card.running == null && !askedNotifications) {
                                     askedNotifications = true
@@ -199,6 +202,7 @@ fun TrackerRoute(
                                 }
                                 vm.toggle(card)
                             },
+                            onOpenSession = { onSession(card.type.id) },
                             onEdit = { onEditType(card.type.id) },
                             onEditRunning = { editingRunning = card },
                             onDiscard = { card.running?.let { discarding = it } },
@@ -250,6 +254,7 @@ private fun TypeCardView(
     now: Long,
     compactRow: Boolean,
     onToggle: () -> Unit,
+    onOpenSession: () -> Unit,
     onEdit: () -> Unit,
     onEditRunning: () -> Unit,
     onDiscard: () -> Unit,
@@ -341,6 +346,7 @@ private fun TypeCardView(
                         expanded = menu,
                         onExpandedChange = { menu = it },
                         running = running != null,
+                        onOpenSession = onOpenSession,
                         onEdit = onEdit,
                         onEditRunning = onEditRunning,
                         onDiscard = onDiscard,
@@ -370,6 +376,7 @@ private fun TypeCardView(
                         expanded = menu,
                         onExpandedChange = { menu = it },
                         running = running != null,
+                        onOpenSession = onOpenSession,
                         onEdit = onEdit,
                         onEditRunning = onEditRunning,
                         onDiscard = onDiscard,
@@ -508,6 +515,7 @@ private fun TrackerMenu(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     running: Boolean,
+    onOpenSession: () -> Unit,
     onEdit: () -> Unit,
     onEditRunning: () -> Unit,
     onDiscard: () -> Unit,
@@ -522,6 +530,10 @@ private fun TrackerMenu(
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { onExpandedChange(false) }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.tracker_session_title)) },
+                onClick = { onExpandedChange(false); onOpenSession() },
+            )
             if (running) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.tracker_adjust_running)) },

@@ -16,6 +16,8 @@ focus time. Everything stays on the device.
 
 - **Tasks**: lists / folders, subtasks, priorities, tags, due dates, recurring tasks, custom reminders when creating a task, search, trash; list / month / week views with tasks added for the selected calendar date
 - **Activity timing**: custom activity types, one-tap start / stop, several timers at once, task linking, daily / weekly / monthly duration goals
+- **Stage timing**: open a timer card to assign subprojects for this session, mark completed stages without resetting the stopwatch, and inspect each record with its own time-distribution chart
+- **Navigation**: choose and reorder 3–5 bottom shortcuts in Settings; Tasks, Timer and More always remain available
 - **Habits**: every day / selected weekdays / N times a week, streaks, weekly progress and a check-in calendar
 - **Countdowns**: count down or up, optional yearly repeat
 - **Statistics**: day / week / month / year views; month view switches between heatmap and bars; tracked time and completed tasks, with editable records
@@ -37,6 +39,13 @@ system language falls back to English. You can override the choice under
 **More → Settings → Appearance → Language**; the change applies immediately and is kept. Reminders
 and timer notifications follow the same setting. Your task, habit and note text is never translated.
 The month chart style is under **More → Settings → Appearance → Month view chart**.
+
+## Upgrade compatibility
+
+v0.5.0 migrates Room from version 2 to 3 without changing existing records or farm history.
+JSON backup format remains 2 and accepts formats 1 and 2. New backups also preserve subprojects,
+running stage plans, completed stages and bottom navigation settings. Older app versions do not
+understand these new fields. CSV continues to export one row per complete time record.
 
 ## Build and test
 
